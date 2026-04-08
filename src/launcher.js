@@ -164,12 +164,7 @@ async function loadGraveList() {
   const deadPets = (pets || []).filter(p => p.isDead);
 
   if (deadPets.length === 0) {
-    graveList.innerHTML = `
-      <div class="empty-state">
-        <div class="emoji">🪦</div>
-        <div>아직 떠난 펫이 없어요</div>
-      </div>
-    `;
+    graveList.innerHTML = '';
     return;
   }
 
