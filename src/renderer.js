@@ -435,12 +435,24 @@ function onInteractiveLeave() {
 });
 
 // ─── 상태 패널 토글 (호버) ───────────────────────
-petContainer.addEventListener('mouseenter', () => {
+// 캐릭터(petEl)에 마우스를 올렸을 때만 상태창 표시
+petEl.addEventListener('mouseenter', () => {
   statusPanel.classList.remove('hidden');
 });
 
-petContainer.addEventListener('mouseleave', () => {
-  statusPanel.classList.add('hidden');
+petEl.addEventListener('mouseleave', () => {
+  // 상태창 위에 있으면 유지
+  setTimeout(() => {
+    if (!statusPanel.matches(':hover') && !petEl.matches(':hover')) {
+      statusPanel.classList.add('hidden');
+    }
+  }, 100);
+});
+
+statusPanel.addEventListener('mouseleave', () => {
+  if (!petEl.matches(':hover')) {
+    statusPanel.classList.add('hidden');
+  }
 });
 
 // ═════════════════════════════════════════════════
