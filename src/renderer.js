@@ -100,18 +100,23 @@ window.api.onWorldEvent((data) => {
     const myPower = game.getTotalPower() + Math.random() * 20;
     const oppPower = (data.opponentPower || 0) + Math.random() * 20;
     if (myPower < oppPower) {
-      // 패배 → 부상 등급 판정
+      // 패배 → 부상 등급 판정 + 코인 약탈당함
+      const myCoins = game.state.coins || 0;
+      const lostCoins = Math.floor(myCoins * (0.1 + Math.random() * 0.4));
+      game.state.coins = Math.max(0, myCoins - lostCoins);
       const result = game.applyBattleInjury(data.opponent);
       if (result.dead) {
         // 사망 처리됨 (applyBattleInjury에서 알림)
       } else {
-        showNotification(`😵 ${data.opponent}에게 패배! [${result.label}] 체력 -${result.healthLoss}`);
+        showNotification(`😵 ${data.opponent}에게 패배! [${result.label}] 체력-${result.healthLoss}${lostCoins > 0 ? ` 💰-${lostCoins}` : ''}`);
       }
     } else {
       game.state.happiness = game.capGauge(game.state.happiness + 5);
-      game.state.coins = (game.state.coins || 0) + 15;
+      // 상대 코인에서 랜덤하게 뺏어오기 (10~50% of 상대 코인)
+      const stolenCoins = data.opponentCoins ? Math.floor(data.opponentCoins * (0.1 + Math.random() * 0.4)) : 0;
+      game.state.coins = (game.state.coins || 0) + stolenCoins;
       game.gainExp(15);
-      showNotification(`💪 ${data.opponent}를 이겼어요! (+15코인)`);
+      showNotification(`💪 ${data.opponent}를 이겼어요!${stolenCoins > 0 ? ` 💰${stolenCoins}코인 획득!` : ''}`);
     }
   } else if (data.type === 'married') {
     showNotification(`💕 ${data.partner}와(과) 결혼했어요!`);

@@ -403,17 +403,17 @@ function triggerBattle(name1, name2) {
 
   // 1.5초 후 결과 계산 (상대 전투력 포함)
   setTimeout(() => {
-    const getPower = (name) => {
+    const getPetData = (name) => {
       try {
         const data = JSON.parse(fs.readFileSync(path.join(PETS_DIR, name + '.json'), 'utf-8'));
         const stats = data.combatStats || { attack: 0, defense: 0, speed: 0 };
-        return stats.attack + stats.defense + stats.speed;
-      } catch (e) { return 0; }
+        return { power: stats.attack + stats.defense + stats.speed, coins: data.coins || 0 };
+      } catch (e) { return { power: 0, coins: 0 }; }
     };
-    const power1 = getPower(name1);
-    const power2 = getPower(name2);
-    win1.webContents.send('world-event', { type: 'battle-resolve', opponent: name2, opponentPower: power2 });
-    win2.webContents.send('world-event', { type: 'battle-resolve', opponent: name1, opponentPower: power1 });
+    const d1 = getPetData(name1);
+    const d2 = getPetData(name2);
+    win1.webContents.send('world-event', { type: 'battle-resolve', opponent: name2, opponentPower: d2.power, opponentCoins: d2.coins });
+    win2.webContents.send('world-event', { type: 'battle-resolve', opponent: name1, opponentPower: d1.power, opponentCoins: d1.coins });
 
     const key = getRelationshipKey(name1, name2);
     if (worldData.relationships[key]) {

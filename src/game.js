@@ -413,7 +413,6 @@ class TamagotchiGame {
         s.combatStats.defense += bonus.defense;
         s.combatStats.speed += bonus.speed;
       }
-      s.coins = (s.coins || 0) + 30;
       s.gaugeMax = (s.gaugeMax || 100) + GAUGE_PER_EVOLUTION; // 게이지 최대치 대폭 성장
       const names = ALL_STAGE_NAMES[s.creatureType || 'dragon'];
       const name = (names && names[newStage]) || newStage;
@@ -474,7 +473,6 @@ class TamagotchiGame {
         s.combatStats.defense += s.growthRolls.defense;
         s.combatStats.speed += s.growthRolls.speed;
       }
-      s.coins = (s.coins || 0) + 10;
       s.gaugeMax = (s.gaugeMax || 100) + GAUGE_PER_LEVEL; // 게이지 최대치 성장
       this.notify(`🎉 레벨 ${s.level} (최대치 ${s.gaugeMax}) 달성!`);
       if (this.onLevelUp) this.onLevelUp(s.level);
@@ -544,17 +542,13 @@ class TamagotchiGame {
 
   // --- 행동 ---
 
-  earnCoins(action) {
-    const amount = ACTION_COINS[action] || 0;
-    if (amount) this.state.coins = (this.state.coins || 0) + amount;
-  }
+  // 코인은 일하기로만 획득
 
   feed() {
     if (this.state.isDead || this.state.isSleeping) return;
     this.state.hunger = Math.min(100, this.state.hunger + 25);
     this.state.careScore++;
     this.gainExp(ACTION_EXP.feed);
-    this.earnCoins('feed');
     this.emitUpdate();
   }
 
@@ -565,7 +559,6 @@ class TamagotchiGame {
     this.state.energy = Math.max(0, this.state.energy - 8);
     this.state.careScore++;
     this.gainExp(ACTION_EXP.play);
-    this.earnCoins('play');
     this.emitUpdate();
   }
 
@@ -574,7 +567,6 @@ class TamagotchiGame {
     this.state.happiness = Math.min(100, this.state.happiness + 3);
     this.state.cleanliness = Math.min(100, this.state.cleanliness + 2);
     this.gainExp(ACTION_EXP.waterPlay);
-    this.earnCoins('waterPlay');
     this.emitUpdate();
   }
 
@@ -583,7 +575,6 @@ class TamagotchiGame {
     this.state.happiness = Math.min(100, this.state.happiness + 2);
     this.state.energy = Math.max(0, this.state.energy - 3);
     this.gainExp(ACTION_EXP.ballPlay);
-    this.earnCoins('ballPlay');
     this.emitUpdate();
   }
 
@@ -599,7 +590,6 @@ class TamagotchiGame {
     this.state.cleanliness = Math.min(100, this.state.cleanliness + 30);
     this.state.careScore++;
     this.gainExp(ACTION_EXP.clean);
-    this.earnCoins('clean');
     this.emitUpdate();
   }
 
@@ -610,7 +600,6 @@ class TamagotchiGame {
       this.state.health = Math.min(100, this.state.health + 20);
       this.state.careScore++;
       this.gainExp(ACTION_EXP.medicine);
-      this.earnCoins('medicine');
     }
     this.emitUpdate();
   }
@@ -620,7 +609,6 @@ class TamagotchiGame {
     this.state.intimacy = Math.min(100, this.state.intimacy + 5);
     this.state.happiness = Math.min(100, this.state.happiness + 5);
     this.gainExp(ACTION_EXP.pet);
-    this.earnCoins('pet');
     this.emitUpdate();
   }
 
