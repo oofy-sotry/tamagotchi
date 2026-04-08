@@ -202,6 +202,9 @@ ipcMain.handle('list-pets', () => {
           personality: data.personality || null,
           mbti: data.mbti || null,
           parents: data.parents || null,
+          deathCause: data.deathCause || null,
+          birthTime: data.birthTime || null,
+          age: data.age || 0,
           isOpen: petWindows.has(data.petName || f.replace('.json', '')),
         };
       } catch (e) { return null; }

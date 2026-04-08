@@ -24,7 +24,9 @@ async function loadPetList() {
   const { success, pets } = await window.api.listPets();
   petList.innerHTML = '';
 
-  if (!pets || pets.length === 0) {
+  const alivePets = (pets || []).filter(p => !p.isDead);
+
+  if (alivePets.length === 0) {
     petList.innerHTML = `
       <div class="empty-state">
         <div class="emoji">🥚</div>
@@ -34,7 +36,9 @@ async function loadPetList() {
     return;
   }
 
-  pets.forEach(pet => {
+  const pets_to_show = alivePets;
+
+  pets_to_show.forEach(pet => {
     const card = document.createElement('div');
     card.className = 'pet-card' + (pet.isOpen ? ' is-open' : '') + (pet.isDead ? ' is-dead' : '');
 
@@ -122,6 +126,100 @@ async function createNewPet() {
 
   nameOverlay.classList.add('hidden');
   loadPetList();
+}
+
+// ─── 탭 전환 ─────────────────────────────────────
+const tabAlive = document.getElementById('tab-alive');
+const tabGrave = document.getElementById('tab-grave');
+const graveList = document.getElementById('grave-list');
+
+tabAlive.addEventListener('click', () => {
+  tabAlive.classList.add('active');
+  tabGrave.classList.remove('active');
+  petList.classList.remove('hidden');
+  graveList.classList.add('hidden');
+  newPetBtn.classList.remove('hidden');
+});
+
+tabGrave.addEventListener('click', () => {
+  tabGrave.classList.add('active');
+  tabAlive.classList.remove('active');
+  graveList.classList.remove('hidden');
+  petList.classList.add('hidden');
+  newPetBtn.classList.add('hidden');
+  loadGraveList();
+});
+
+// ─── 묘지 ────────────────────────────────────────
+const DEATH_CAUSES = {
+  natural: '🕊️ 자연사 (노환)',
+  battle: '⚔️ 전투사',
+  starve: '🍖 아사 (굶주림)',
+};
+
+async function loadGraveList() {
+  const { success, pets } = await window.api.listPets();
+  graveList.innerHTML = '';
+
+  const deadPets = (pets || []).filter(p => p.isDead);
+
+  if (deadPets.length === 0) {
+    graveList.innerHTML = `
+      <div class="empty-state">
+        <div class="emoji">🪦</div>
+        <div>아직 떠난 펫이 없어요</div>
+      </div>
+    `;
+    return;
+  }
+
+  deadPets.forEach(pet => {
+    const card = document.createElement('div');
+    card.className = 'grave-card';
+
+    const icon = CREATURE_ICONS[pet.creatureType] || '🥚';
+    const typeName = CREATURE_NAMES[pet.creatureType] || '알';
+    const cause = DEATH_CAUSES[pet.deathCause] || '💀 사인 불명';
+    const parentText = pet.parents ? `부모: ${pet.parents.parent1} ♥ ${pet.parents.parent2}` : '1세대';
+
+    const PERSONALITY_NAMES = {
+      brave:'🦁용감', gentle:'🕊️온화', playful:'🎪장난', lazy:'😴게으른',
+      proud:'👑도도', shy:'🙈수줍', greedy:'💰욕심', caring:'💗다정',
+    };
+    const pText = pet.personality ? (PERSONALITY_NAMES[pet.personality] || '') : '';
+    const mText = pet.mbti || '';
+
+    // 나이 계산 (birthTime 기반)
+    let ageText = '';
+    if (pet.birthTime) {
+      const msPerDay = 60 * 60 * 1000; // 1시간 = 1살
+      const ageDays = Math.floor((Date.now() - pet.birthTime) / msPerDay);
+      ageText = `향년 ${ageDays}살`;
+    }
+
+    card.innerHTML = `
+      <div class="grave-header">
+        <span class="grave-icon">${icon}</span>
+        <span class="grave-name">${pet.name}</span>
+        <span class="grave-age">${ageText}</span>
+        <button class="grave-delete" title="삭제">🗑</button>
+      </div>
+      <div class="grave-cause">${cause}</div>
+      <div class="grave-detail">
+        Lv.${pet.level} ${typeName} · ${pText} ${mText}<br>
+        ${parentText}
+      </div>
+    `;
+
+    card.querySelector('.grave-delete').addEventListener('click', async () => {
+      if (confirm(`"${pet.name}"의 기록을 삭제할까요?`)) {
+        await window.api.deletePet(pet.name);
+        loadGraveList();
+      }
+    });
+
+    graveList.appendChild(card);
+  });
 }
 
 // ─── 닫기 버튼 ───────────────────────────────────

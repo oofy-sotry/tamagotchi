@@ -58,6 +58,61 @@
     .pet-card.is-open { opacity: 0.5; cursor: default; }
     .pet-card.is-dead { opacity: 0.4; }
 
+    /* 탭 */
+    .launcher-tabs {
+      display: flex;
+      padding: 0 16px;
+      gap: 0;
+      border-bottom: 1px solid #eee;
+    }
+    .launcher-tab {
+      flex: 1;
+      padding: 8px;
+      font-size: 13px;
+      font-weight: bold;
+      text-align: center;
+      cursor: pointer;
+      color: #999;
+      border-bottom: 2px solid transparent;
+      transition: color 0.2s, border-color 0.2s;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+    }
+    .launcher-tab.active { color: #ff6600; border-bottom-color: #ff6600; }
+    .launcher-tab:hover:not(.active) { color: #666; }
+
+    /* 묘지 카드 */
+    .grave-card {
+      padding: 10px 12px;
+      border-radius: 10px;
+      margin-bottom: 6px;
+      background: rgba(0,0,0,0.02);
+    }
+    .grave-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .grave-icon { font-size: 18px; }
+    .grave-name { font-size: 13px; font-weight: bold; color: #555; }
+    .grave-age { font-size: 11px; color: #999; }
+    .grave-detail { font-size: 10px; color: #888; line-height: 1.6; }
+    .grave-cause {
+      font-size: 11px;
+      color: #c0392b;
+      font-weight: bold;
+      margin-top: 2px;
+    }
+    .grave-delete {
+      background: none; border: none; font-size: 12px;
+      cursor: pointer; opacity: 0.3; padding: 2px;
+      margin-left: auto;
+    }
+    .grave-delete:hover { opacity: 1; }
+
     .pet-card-icon {
       width: 40px;
       height: 40px;
@@ -169,7 +224,13 @@
     <button class="titlebar-btn" id="close-btn">✕</button>
   </div>
 
+  <div class="launcher-tabs">
+    <button class="launcher-tab active" id="tab-alive">🐾 살아있는 펫</button>
+    <button class="launcher-tab" id="tab-grave">🪦 묘</button>
+  </div>
+
   <div class="pet-list" id="pet-list"></div>
+  <div class="pet-list hidden" id="grave-list"></div>
 
   <button class="new-pet-btn" id="new-pet-btn">
     <span>+</span> 새 펫 만들기
