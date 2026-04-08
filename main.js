@@ -376,8 +376,8 @@ function handleNearby(name1, name2) {
 
   saveWorld(worldData);
 
-  // 배틀 체크 (친밀도 < 0)
-  if (rel.affinity < 0 && Math.random() < 0.15) {
+  // 배틀 체크 (친밀도 < 0, 가족 제외)
+  if (rel.affinity < 0 && Math.random() < 0.15 && !isFamily(name1, name2)) {
     triggerBattle(name1, name2);
   }
 
@@ -450,6 +450,27 @@ function isAlreadyMarried(name) {
   return worldData.marriages.some(m => m.pet1 === name || m.pet2 === name);
 }
 
+function isFamily(name1, name2) {
+  // 부부인지 체크
+  const married = worldData.marriages.some(m =>
+    (m.pet1 === name1 && m.pet2 === name2) || (m.pet1 === name2 && m.pet2 === name1)
+  );
+  if (married) return true;
+
+  // 부모-자식인지 체크 (세이브 파일에서 parents 확인)
+  try {
+    const check = (parent, child) => {
+      const childPath = path.join(PETS_DIR, child + '.json');
+      if (!fs.existsSync(childPath)) return false;
+      const data = JSON.parse(fs.readFileSync(childPath, 'utf-8'));
+      return data.parents && (data.parents.parent1 === parent || data.parents.parent2 === parent);
+    };
+    if (check(name1, name2) || check(name2, name1)) return true;
+  } catch (e) { /* ignore */ }
+
+  return false;
+}
+
 function checkMarriage(name1, name2, affinity) {
   if (affinity < 80) return;
 
@@ -478,7 +499,7 @@ function checkMarriage(name1, name2, affinity) {
 
 // 1게임일 = 1시간
 const EGG_COOLDOWN_DAYS = 20; // 알 낳은 후 20일(20시간) 쿨타임
-const EGG_MIN_MARRIAGE_DAYS = 1; // 결혼 후 최소 1일(1시간) 경과
+const EGG_MIN_MARRIAGE_DAYS = 10; // 결혼 후 최소 10일(10시간) 경과
 const EGG_BASE_CHANCE = 0.50; // 시작 확률 50%
 const EGG_DAILY_INCREASE = 0.01; // 하루당 +1%
 const EGG_MAX_CHANCE = 0.95;
