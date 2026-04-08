@@ -5,6 +5,29 @@ const POOP_CHANCE = 0.08;  // 틱당 똥 확률 (8%)
 const SICK_THRESHOLD = 20; // 청결도 이 이하면 아픔
 const STARVE_DEATH_TICKS = 24; // 배고픔 0 상태로 24틱(~2분) 유지 시 사망
 
+// ─── 시간 스케일 ────────────────────────────────
+// 리얼타임 1시간 = 게임 내 1일(1살)
+const MS_PER_GAME_DAY = 1000 * 60 * 60; // 1시간 = 1일
+
+// ─── 자연사 시스템 ──────────────────────────────
+const NATURAL_DEATH_START_AGE = 100;  // 100살부터 자연사 확률 시작
+const NATURAL_DEATH_BASE_CHANCE = 0.01; // 100살 이후 매일 +1%
+
+// ─── 배틀 부상 시스템 ───────────────────────────
+// 패배 시 부상 등급 확률: 하 60%, 중 30%, 상 10%
+const INJURY_GRADES = {
+  light:  { chance: 0.60, label: '경상', healthLoss: 15, deathChance: 0 },
+  medium: { chance: 0.30, label: '중상', healthLoss: 35, deathChance: 0.03 },  // 3% 사망
+  severe: { chance: 0.10, label: '위독', healthLoss: 60, deathChance: 0.15 },  // 15% 사망
+};
+
+function rollInjury() {
+  const r = Math.random();
+  if (r < INJURY_GRADES.light.chance) return 'light';
+  if (r < INJURY_GRADES.light.chance + INJURY_GRADES.medium.chance) return 'medium';
+  return 'severe';
+}
+
 // ─── 피로도(에너지) 시스템 ───────────────────────
 const ENERGY_DECAY = 1.5;       // 깨어있을 때 틱당 에너지 감소
 const ENERGY_RECOVER = 4;       // 잠잘 때 틱당 에너지 회복
@@ -341,7 +364,8 @@ class TamagotchiGame {
       s.starvingTicks++;
       if (s.starvingTicks >= STARVE_DEATH_TICKS) {
         s.isDead = true;
-        this.notify('용이 굶어서 떠났어요... 😢');
+        s.deathCause = 'starve';
+        this.notify(`${s.petName || '펫'}이(가) 굶어서 떠났어요... 😢`);
       } else if (s.starvingTicks === 1) {
         this.notify('⚠️ 배고픔이 바닥났어요! 빨리 밥을 주세요!');
       } else if (s.starvingTicks === Math.floor(STARVE_DEATH_TICKS / 2)) {
@@ -358,6 +382,12 @@ class TamagotchiGame {
 
     // 진화 체크
     this.checkEvolution();
+
+    // 자연사 체크 (720틱 = 1시간 = 1게임일 마다)
+    const ticksPerDay = Math.floor(MS_PER_GAME_DAY / TICK_INTERVAL);
+    if (s.age % ticksPerDay === 0 && s.age > 0) {
+      this.checkNaturalDeath();
+    }
 
     this.emitUpdate();
     this.autoSave();
@@ -390,6 +420,43 @@ class TamagotchiGame {
       this.notify(`✨ ${name}(으)로 진화! (최대치 ${s.gaugeMax})`);
       if (this.onEvolve) this.onEvolve(newStage, name);
     }
+  }
+
+  // --- 자연사 시스템 ---
+
+  checkNaturalDeath() {
+    const age = this.getAgeDays();
+    if (age <= NATURAL_DEATH_START_AGE) return;
+
+    // 100살 이후: (나이 - 100) * 1% 확률
+    const deathChance = (age - NATURAL_DEATH_START_AGE) * NATURAL_DEATH_BASE_CHANCE;
+    if (Math.random() < deathChance) {
+      this.state.isDead = true;
+      this.state.deathCause = 'natural';
+      this.notify(`🕊️ ${this.state.petName}이(가) ${age}살에 편안히 눈을 감았어요...`);
+    } else if (age >= 95 && age < NATURAL_DEATH_START_AGE) {
+      this.notify(`👴 ${age}살... 노년에 접어들었어요`);
+    }
+  }
+
+  // --- 배틀 부상 처리 ---
+
+  applyBattleInjury(opponentName) {
+    const grade = rollInjury();
+    const injury = INJURY_GRADES[grade];
+
+    this.state.health = Math.max(0, this.state.health - injury.healthLoss);
+    this.state.happiness = Math.max(0, this.state.happiness - 15);
+
+    // 사망 판정
+    if (injury.deathChance > 0 && Math.random() < injury.deathChance) {
+      this.state.isDead = true;
+      this.state.deathCause = 'battle';
+      this.notify(`💀 ${opponentName}와(과)의 싸움에서 치명상... ${this.state.petName}이(가) 쓰러졌어요`);
+      return { grade, dead: true };
+    }
+
+    return { grade, dead: false, label: injury.label, healthLoss: injury.healthLoss };
   }
 
   // --- 레벨 / 경험치 ---
@@ -673,7 +740,7 @@ class TamagotchiGame {
 
   getAgeDays() {
     const elapsed = Date.now() - this.state.birthTime;
-    return Math.floor(elapsed / (1000 * 60 * 60 * 24));
+    return Math.floor(elapsed / MS_PER_GAME_DAY); // 1시간 = 1살
   }
 
   getStageName() {

@@ -100,11 +100,15 @@ window.api.onWorldEvent((data) => {
     const myPower = game.getTotalPower() + Math.random() * 20;
     const oppPower = (data.opponentPower || 0) + Math.random() * 20;
     if (myPower < oppPower) {
-      game.state.health = Math.max(0, game.state.health - 20);
-      game.state.happiness = Math.max(0, game.state.happiness - 15);
-      showNotification(`😵 ${data.opponent}에게 졌어요... (${Math.floor(myPower)} vs ${Math.floor(oppPower)})`);
+      // 패배 → 부상 등급 판정
+      const result = game.applyBattleInjury(data.opponent);
+      if (result.dead) {
+        // 사망 처리됨 (applyBattleInjury에서 알림)
+      } else {
+        showNotification(`😵 ${data.opponent}에게 패배! [${result.label}] 체력 -${result.healthLoss}`);
+      }
     } else {
-      game.state.happiness = Math.min(100, game.state.happiness + 5);
+      game.state.happiness = game.capGauge(game.state.happiness + 5);
       game.state.coins = (game.state.coins || 0) + 15;
       game.gainExp(15);
       showNotification(`💪 ${data.opponent}를 이겼어요! (+15코인)`);
@@ -244,7 +248,7 @@ function renderState(state, emotion) {
   levelLabel.textContent = 'Lv.' + state.level;
 
   stageLabel.textContent = game.getStageName();
-  ageLabel.textContent = game.getAgeDays() + '일';
+  ageLabel.textContent = game.getAgeDays() + '살';
 
   // 전투력 / 코인 / 등급
   const powerLabel = document.getElementById('power-label');
@@ -281,6 +285,21 @@ function renderState(state, emotion) {
 
   renderPoops(state.poops);
   deathScreen.classList.toggle('hidden', !state.isDead);
+
+  // 사망 사인 표시
+  if (state.isDead) {
+    const deathMsg = document.getElementById('death-msg');
+    const deathCause = document.getElementById('death-cause');
+    const name = state.petName || '펫';
+    const age = game.getAgeDays();
+    const causes = {
+      natural: `🕊️ ${name}이(가) ${age}살에 편안히 눈을 감았어요`,
+      battle: `⚔️ ${name}이(가) 전투 중 쓰러졌어요`,
+      starve: `${name}이(가) 굶어서 떠났어요`,
+    };
+    if (deathMsg) deathMsg.textContent = causes[state.deathCause] || `${name}이(가) 떠났어요...`;
+    if (deathCause) deathCause.textContent = `향년 ${age}살`;
+  }
 }
 
 // ─── 똥 렌더링 ───────────────────────────────────
