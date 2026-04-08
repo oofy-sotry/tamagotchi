@@ -428,8 +428,8 @@ class TamagotchiGame {
     const age = this.getAgeDays();
     if (age <= NATURAL_DEATH_START_AGE) return;
 
-    // 100살 이후: (나이 - 100) * 1% 확률
-    const deathChance = (age - NATURAL_DEATH_START_AGE) * NATURAL_DEATH_BASE_CHANCE;
+    // 100살 이후: (나이 - 100) * 1% 확률, 최대 51%
+    const deathChance = Math.min(0.51, (age - NATURAL_DEATH_START_AGE) * NATURAL_DEATH_BASE_CHANCE);
     if (Math.random() < deathChance) {
       this.state.isDead = true;
       this.state.deathCause = 'natural';
