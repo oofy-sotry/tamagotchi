@@ -529,6 +529,11 @@ class TamagotchiGame {
       s.health = Math.min(s.gaugeMax || 100, s.health + 15);
       this.notify('🤖 자동으로 휴식했어요');
     }
+    // 컨디션 좋으면 자동 일하기
+    if (s.health >= 70 && s.energy >= 60 && s.hunger >= 40) {
+      const result = this.work();
+      if (result.success) this.notify('🤖 ' + result.msg);
+    }
   }
 
   toggleAutoCare() {
