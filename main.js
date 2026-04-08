@@ -400,11 +400,19 @@ function triggerBattle(name1, name2) {
   win1.webContents.send('world-event', { type: 'battle-start', opponent: name2 });
   win2.webContents.send('world-event', { type: 'battle-start', opponent: name1 });
 
-  // 1.5초 후 결과 계산
+  // 1.5초 후 결과 계산 (상대 전투력 포함)
   setTimeout(() => {
-    // 펫 데이터 요청 후 계산은 renderer에서 처리
-    win1.webContents.send('world-event', { type: 'battle-resolve', opponent: name2 });
-    win2.webContents.send('world-event', { type: 'battle-resolve', opponent: name1 });
+    const getPower = (name) => {
+      try {
+        const data = JSON.parse(fs.readFileSync(path.join(PETS_DIR, name + '.json'), 'utf-8'));
+        const stats = data.combatStats || { attack: 0, defense: 0, speed: 0 };
+        return stats.attack + stats.defense + stats.speed;
+      } catch (e) { return 0; }
+    };
+    const power1 = getPower(name1);
+    const power2 = getPower(name2);
+    win1.webContents.send('world-event', { type: 'battle-resolve', opponent: name2, opponentPower: power2 });
+    win2.webContents.send('world-event', { type: 'battle-resolve', opponent: name1, opponentPower: power1 });
 
     const key = getRelationshipKey(name1, name2);
     if (worldData.relationships[key]) {

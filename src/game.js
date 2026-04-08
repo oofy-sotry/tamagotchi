@@ -68,6 +68,64 @@ function expForLevel(level) {
   return Math.floor(BASE_EXP * Math.pow(EXP_GROWTH, level - 1));
 }
 
+// ─── 성장 등급 시스템 ────────────────────────────
+const GROWTH_GRADES = {
+  low:  { label: '하', levelRange: [1, 3], evoRange: [3, 5] },
+  mid:  { label: '중', levelRange: [4, 7], evoRange: [6, 10] },
+  high: { label: '상', levelRange: [8, 10], evoRange: [11, 15] },
+};
+
+function rollGrowthGrade() {
+  const r = Math.random();
+  if (r < 0.6) return 'low';   // 60%
+  if (r < 0.9) return 'mid';   // 30%
+  return 'high';                // 10%
+}
+
+function rollInRange(min, max) {
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
+
+function rollGrowthValues(grade) {
+  const [min, max] = GROWTH_GRADES[grade].levelRange;
+  return { attack: rollInRange(min, max), defense: rollInRange(min, max), speed: rollInRange(min, max) };
+}
+
+function rollInitialStats() {
+  return { attack: rollInRange(1, 10), defense: rollInRange(1, 10), speed: rollInRange(1, 10) };
+}
+
+function rollEvoBonus(grade) {
+  const [min, max] = GROWTH_GRADES[grade].evoRange;
+  return { attack: rollInRange(min, max), defense: rollInRange(min, max), speed: rollInRange(min, max) };
+}
+
+// ─── 코인 보상 ──────────────────────────────────
+const ACTION_COINS = {
+  feed: 2, play: 5, waterPlay: 3, ballPlay: 4,
+  clean: 3, pet: 1, medicine: 2, cleanPoop: 2,
+};
+
+// ─── 상점 아이템 ────────────────────────────────
+const SHOP_ITEMS = {
+  // 소모품 (즉시 스탯 적용)
+  'atk-potion-s': { name: '공격력 물약(소)', type: 'consumable', stat: 'attack', value: 3, price: 20, icon: '⚗️' },
+  'atk-potion-m': { name: '공격력 물약(중)', type: 'consumable', stat: 'attack', value: 8, price: 50, icon: '⚗️' },
+  'def-potion-s': { name: '방어력 물약(소)', type: 'consumable', stat: 'defense', value: 3, price: 20, icon: '🧪' },
+  'def-potion-m': { name: '방어력 물약(중)', type: 'consumable', stat: 'defense', value: 8, price: 50, icon: '🧪' },
+  'spd-potion-s': { name: '속도 물약(소)', type: 'consumable', stat: 'speed', value: 3, price: 20, icon: '💨' },
+  // 무기 (장착)
+  'wooden-sword':  { name: '나무 검',     type: 'weapon', attack: 3,  price: 30,  icon: '🗡️', pixel: 'sword_wood' },
+  'iron-sword':    { name: '철 검',       type: 'weapon', attack: 8,  price: 80,  icon: '⚔️', pixel: 'sword_iron' },
+  'flame-sword':   { name: '화염 검',     type: 'weapon', attack: 15, price: 200, icon: '🔥', pixel: 'sword_flame' },
+  'legend-sword':  { name: '전설의 검',   type: 'weapon', attack: 30, price: 500, icon: '✨', pixel: 'sword_legend' },
+  // 악세사리 (장착)
+  'wooden-shield': { name: '나무 방패',   type: 'accessory', defense: 3,  price: 30,  icon: '🛡️', pixel: 'shield_wood' },
+  'iron-shield':   { name: '철 방패',     type: 'accessory', defense: 8,  price: 80,  icon: '🛡️', pixel: 'shield_iron' },
+  'ribbon':        { name: '리본',        type: 'accessory', speed: 5,   price: 40,  icon: '🎀', pixel: 'ribbon' },
+  'crown':         { name: '왕관',        type: 'accessory', defense: 5, speed: 5, price: 300, icon: '👑', pixel: 'crown' },
+};
+
 // 행동별 경험치
 const ACTION_EXP = {
   feed: 5,
@@ -116,6 +174,15 @@ function createDefaultState() {
     creatureType: null, // 캐릭터 타입 (null = 미선택)
     colorVariant: null, // 색상 변형 (null = 미선택)
     petName: '',        // 펫 이름
+    // 전투 스탯
+    combatStats: { attack: 0, defense: 0, speed: 0 },
+    growthGrade: null,    // 'low' | 'mid' | 'high'
+    growthRolls: { attack: 0, defense: 0, speed: 0 },
+    // 경제 & 장비
+    coins: 0,
+    equippedWeapon: null,     // 아이템 ID
+    equippedAccessory: null,  // 아이템 ID
+    inventory: [],            // 보유 아이템 ID 목록
   };
 }
 
@@ -151,6 +218,10 @@ class TamagotchiGame {
     this.state.creatureType = type;
     this.state.colorVariant = colorVariant || 'orange';
     this.state.petName = petName || '';
+    // 성장 등급 & 초기 스탯 결정
+    this.state.growthGrade = rollGrowthGrade();
+    this.state.growthRolls = rollGrowthValues(this.state.growthGrade);
+    this.state.combatStats = rollInitialStats();
     setCreatureType(type);
     setColorVariant(this.state.colorVariant);
     this.save();
@@ -289,8 +360,17 @@ class TamagotchiGame {
       const newStage = STAGES[stageIdx + 1];
       s.stage = newStage;
       s.evolutionTicks = 0;
-      const name = STAGE_NAMES[newStage];
-      this.notify(`✨ ${name}(으)로 진화했어요!`);
+      // 진화 시 스탯 보너스
+      if (s.growthGrade && s.combatStats) {
+        const bonus = rollEvoBonus(s.growthGrade);
+        s.combatStats.attack += bonus.attack;
+        s.combatStats.defense += bonus.defense;
+        s.combatStats.speed += bonus.speed;
+      }
+      s.coins = (s.coins || 0) + 30; // 진화 보너스 코인
+      const names = ALL_STAGE_NAMES[s.creatureType || 'dragon'];
+      const name = (names && names[newStage]) || newStage;
+      this.notify(`✨ ${name}(으)로 진화했어요! (스탯 대폭 ↑)`);
       if (this.onEvolve) this.onEvolve(newStage, name);
     }
   }
@@ -304,7 +384,14 @@ class TamagotchiGame {
     if (s.exp >= needed) {
       s.exp -= needed;
       s.level++;
-      this.notify(`🎉 레벨 ${s.level} 달성!`);
+      // 렙업 시 스탯 상승 (growthRolls 만큼 고정 상승)
+      if (s.growthRolls && s.combatStats) {
+        s.combatStats.attack += s.growthRolls.attack;
+        s.combatStats.defense += s.growthRolls.defense;
+        s.combatStats.speed += s.growthRolls.speed;
+      }
+      s.coins = (s.coins || 0) + 10; // 렙업 보너스 코인
+      this.notify(`🎉 레벨 ${s.level} 달성! (스탯 ↑)`);
       if (this.onLevelUp) this.onLevelUp(s.level);
     }
   }
@@ -359,11 +446,17 @@ class TamagotchiGame {
 
   // --- 행동 ---
 
+  earnCoins(action) {
+    const amount = ACTION_COINS[action] || 0;
+    if (amount) this.state.coins = (this.state.coins || 0) + amount;
+  }
+
   feed() {
     if (this.state.isDead || this.state.isSleeping) return;
     this.state.hunger = Math.min(100, this.state.hunger + 25);
     this.state.careScore++;
     this.gainExp(ACTION_EXP.feed);
+    this.earnCoins('feed');
     this.emitUpdate();
   }
 
@@ -374,6 +467,7 @@ class TamagotchiGame {
     this.state.energy = Math.max(0, this.state.energy - 8);
     this.state.careScore++;
     this.gainExp(ACTION_EXP.play);
+    this.earnCoins('play');
     this.emitUpdate();
   }
 
@@ -382,6 +476,7 @@ class TamagotchiGame {
     this.state.happiness = Math.min(100, this.state.happiness + 3);
     this.state.cleanliness = Math.min(100, this.state.cleanliness + 2);
     this.gainExp(ACTION_EXP.waterPlay);
+    this.earnCoins('waterPlay');
     this.emitUpdate();
   }
 
@@ -390,6 +485,7 @@ class TamagotchiGame {
     this.state.happiness = Math.min(100, this.state.happiness + 2);
     this.state.energy = Math.max(0, this.state.energy - 3);
     this.gainExp(ACTION_EXP.ballPlay);
+    this.earnCoins('ballPlay');
     this.emitUpdate();
   }
 
@@ -405,6 +501,7 @@ class TamagotchiGame {
     this.state.cleanliness = Math.min(100, this.state.cleanliness + 30);
     this.state.careScore++;
     this.gainExp(ACTION_EXP.clean);
+    this.earnCoins('clean');
     this.emitUpdate();
   }
 
@@ -415,6 +512,7 @@ class TamagotchiGame {
       this.state.health = Math.min(100, this.state.health + 20);
       this.state.careScore++;
       this.gainExp(ACTION_EXP.medicine);
+      this.earnCoins('medicine');
     }
     this.emitUpdate();
   }
@@ -424,7 +522,65 @@ class TamagotchiGame {
     this.state.intimacy = Math.min(100, this.state.intimacy + 5);
     this.state.happiness = Math.min(100, this.state.happiness + 5);
     this.gainExp(ACTION_EXP.pet);
+    this.earnCoins('pet');
     this.emitUpdate();
+  }
+
+  // --- 상점 & 장비 ---
+
+  buyItem(itemId) {
+    const item = SHOP_ITEMS[itemId];
+    if (!item) return { success: false, msg: '아이템을 찾을 수 없어요' };
+    if ((this.state.coins || 0) < item.price) return { success: false, msg: '코인이 부족해요' };
+
+    this.state.coins -= item.price;
+
+    if (item.type === 'consumable') {
+      // 소모품: 즉시 스탯 적용
+      if (this.state.combatStats && item.stat) {
+        this.state.combatStats[item.stat] += item.value;
+      }
+      return { success: true, msg: `${item.name} 사용! ${item.stat} +${item.value}` };
+    } else {
+      // 장비: 인벤토리에 추가
+      if (!this.state.inventory) this.state.inventory = [];
+      this.state.inventory.push(itemId);
+      return { success: true, msg: `${item.name} 구매 완료!` };
+    }
+  }
+
+  equipItem(itemId) {
+    const item = SHOP_ITEMS[itemId];
+    if (!item) return;
+    if (!this.state.inventory || !this.state.inventory.includes(itemId)) return;
+
+    if (item.type === 'weapon') {
+      this.state.equippedWeapon = itemId;
+    } else if (item.type === 'accessory') {
+      this.state.equippedAccessory = itemId;
+    }
+    this.emitUpdate();
+  }
+
+  unequipItem(slot) {
+    if (slot === 'weapon') this.state.equippedWeapon = null;
+    else if (slot === 'accessory') this.state.equippedAccessory = null;
+    this.emitUpdate();
+  }
+
+  getTotalPower() {
+    const s = this.state;
+    const base = (s.combatStats ? s.combatStats.attack + s.combatStats.defense + s.combatStats.speed : 0);
+    let bonus = 0;
+    if (s.equippedWeapon && SHOP_ITEMS[s.equippedWeapon]) {
+      const w = SHOP_ITEMS[s.equippedWeapon];
+      bonus += (w.attack || 0) + (w.defense || 0) + (w.speed || 0);
+    }
+    if (s.equippedAccessory && SHOP_ITEMS[s.equippedAccessory]) {
+      const a = SHOP_ITEMS[s.equippedAccessory];
+      bonus += (a.attack || 0) + (a.defense || 0) + (a.speed || 0);
+    }
+    return base + bonus;
   }
 
   cleanPoop() {

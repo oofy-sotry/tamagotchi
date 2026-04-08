@@ -874,6 +874,62 @@ function applyEmotion(ctx, face, info, palette, isDead) {
 
 // ─── 유틸리티 ────────────────────────────────────
 
+// ─── 장비 스프라이트 데이터 ──────────────────────
+
+const EQUIPMENT_SPRITES = {
+  // 무기 (오른쪽에 표시)
+  'sword_wood':  { pixels: [' 1','1 ','1 '], colors: { '1': '#8B6914' }, anchor: 'right', offsetX: 2, offsetY: -1 },
+  'sword_iron':  { pixels: [' 1','1 ','1 '], colors: { '1': '#A0A0B0' }, anchor: 'right', offsetX: 2, offsetY: -1 },
+  'sword_flame': { pixels: [' 2','1 ','1 '], colors: { '1': '#CC3300', '2': '#FF6600' }, anchor: 'right', offsetX: 2, offsetY: -1 },
+  'sword_legend':{ pixels: ['12','21','1 '], colors: { '1': '#FFD700', '2': '#FFF8DC' }, anchor: 'right', offsetX: 2, offsetY: -1 },
+  // 악세사리 (머리 위 or 왼쪽)
+  'shield_wood': { pixels: ['11','11','11'], colors: { '1': '#8B6914' }, anchor: 'left', offsetX: -3, offsetY: 0 },
+  'shield_iron': { pixels: ['11','11','11'], colors: { '1': '#A0A0B0' }, anchor: 'left', offsetX: -3, offsetY: 0 },
+  'ribbon':      { pixels: ['121','010'],    colors: { '0': '#FF69B4', '1': '#FF1493', '2': '#FFB6C1' }, anchor: 'top', offsetX: -1, offsetY: -2 },
+  'crown':       { pixels: ['10101','01110'],colors: { '0': '#FFD700', '1': '#FFA500' }, anchor: 'top', offsetX: -2, offsetY: -2 },
+};
+
+function drawEquipment(ctx, face, equippedWeapon, equippedAccessory) {
+  if (!face) return;
+  const px = PIXEL_SIZE;
+
+  const drawEquip = (equipPixel) => {
+    if (!equipPixel) return;
+    const sprite = EQUIPMENT_SPRITES[equipPixel];
+    if (!sprite) return;
+
+    let baseX, baseY;
+    if (sprite.anchor === 'right') {
+      baseX = face.rightEye[0] + sprite.offsetX;
+      baseY = face.rightEye[1] + sprite.offsetY;
+    } else if (sprite.anchor === 'left') {
+      baseX = face.leftEye[0] + sprite.offsetX;
+      baseY = face.leftEye[1] + sprite.offsetY;
+    } else { // top
+      const midX = Math.floor((face.leftEye[0] + face.rightEye[0]) / 2);
+      baseX = midX + sprite.offsetX;
+      baseY = face.leftEye[1] + sprite.offsetY;
+    }
+
+    for (let y = 0; y < sprite.pixels.length; y++) {
+      const row = sprite.pixels[y];
+      for (let x = 0; x < row.length; x++) {
+        const ch = row[x];
+        if (ch === ' ') continue;
+        const color = sprite.colors[ch];
+        if (!color) continue;
+        ctx.fillStyle = color;
+        ctx.fillRect((baseX + x) * px, (baseY + y) * px, px, px);
+      }
+    }
+  };
+
+  if (equippedWeapon) drawEquip(equippedWeapon);
+  if (equippedAccessory) drawEquip(equippedAccessory);
+}
+
+// ─── 유틸리티 ────────────────────────────────────
+
 function fillPixel(ctx, pos, color) {
   ctx.fillStyle = color;
   ctx.fillRect(pos[0] * PIXEL_SIZE, pos[1] * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);

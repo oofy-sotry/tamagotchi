@@ -64,6 +64,11 @@
       <div class="status-info">
         <span id="stage-label">알</span> · <span id="age-label">0일</span>
       </div>
+      <div class="status-combat">
+        <span id="grade-label" class="grade-badge"></span>
+        <span>⚔️ <span id="power-label">0</span></span>
+        <span>💰 <span id="coin-label">0</span></span>
+      </div>
     </div>
 
     <div id="pet" class="pet">
@@ -75,6 +80,21 @@
 
   <!-- 똥 -->
   <div id="poop-container"></div>
+
+  <!-- 상점 오버레이 -->
+  <div id="shop-panel" class="shop-panel hidden">
+    <div class="shop-header">
+      <span class="shop-title">💰 상점</span>
+      <span class="shop-coins">코인: <span id="shop-coin-display">0</span></span>
+      <button class="shop-close" id="shop-close">✕</button>
+    </div>
+    <div class="shop-tabs">
+      <button class="shop-tab active" data-tab="consumable">⚗️ 물약</button>
+      <button class="shop-tab" data-tab="weapon">⚔️ 무기</button>
+      <button class="shop-tab" data-tab="accessory">🛡️ 악세사리</button>
+    </div>
+    <div class="shop-items" id="shop-items"></div>
+  </div>
 
   <!-- 사망 화면 -->
   <div id="death-screen" class="death-screen hidden">

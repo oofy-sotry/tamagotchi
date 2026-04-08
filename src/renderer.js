@@ -96,15 +96,18 @@ window.api.onWorldEvent((data) => {
   if (data.type === 'battle-start') {
     showNotification(`⚔️ ${data.opponent}와(과) 싸움 발생!`);
   } else if (data.type === 'battle-resolve') {
-    const power = game.state.level * 3 + game.state.health * 0.2 + Math.random() * 20;
-    if (Math.random() < 0.5) {
+    // 실제 스탯 기반 배틀
+    const myPower = game.getTotalPower() + Math.random() * 20;
+    const oppPower = (data.opponentPower || 0) + Math.random() * 20;
+    if (myPower < oppPower) {
       game.state.health = Math.max(0, game.state.health - 20);
       game.state.happiness = Math.max(0, game.state.happiness - 15);
-      showNotification(`😵 ${data.opponent}에게 졌어요...`);
+      showNotification(`😵 ${data.opponent}에게 졌어요... (${Math.floor(myPower)} vs ${Math.floor(oppPower)})`);
     } else {
       game.state.happiness = Math.min(100, game.state.happiness + 5);
+      game.state.coins = (game.state.coins || 0) + 15;
       game.gainExp(15);
-      showNotification(`💪 ${data.opponent}를 이겼어요!`);
+      showNotification(`💪 ${data.opponent}를 이겼어요! (+15코인)`);
     }
   } else if (data.type === 'married') {
     showNotification(`💕 ${data.partner}와(과) 결혼했어요!`);
@@ -112,6 +115,115 @@ window.api.onWorldEvent((data) => {
     showNotification(`🥚 ${data.partner}와(과) 사이에서 알이 생겼어요!`);
   }
 });
+
+// ─── 상점 UI ─────────────────────────────────────
+const shopPanel = document.getElementById('shop-panel');
+const shopItems = document.getElementById('shop-items');
+const shopCoinDisplay = document.getElementById('shop-coin-display');
+let currentShopTab = 'consumable';
+
+function openShop() {
+  shopPanel.classList.remove('hidden');
+  window.api.setIgnoreMouse(false);
+  document.body.style.pointerEvents = 'auto';
+  shopCoinDisplay.textContent = game.state.coins || 0;
+  renderShopItems(currentShopTab);
+}
+
+function closeShop() {
+  shopPanel.classList.add('hidden');
+  document.body.style.pointerEvents = '';
+  window.api.setIgnoreMouse(true);
+  mouseOverInteractive = 0;
+}
+
+document.getElementById('shop-close').addEventListener('click', closeShop);
+
+document.querySelectorAll('.shop-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentShopTab = tab.dataset.tab;
+    renderShopItems(currentShopTab);
+  });
+});
+
+function renderShopItems(tabType) {
+  shopItems.innerHTML = '';
+  const items = Object.entries(SHOP_ITEMS).filter(([, item]) => item.type === tabType);
+
+  items.forEach(([id, item]) => {
+    const div = document.createElement('div');
+    div.className = 'shop-item';
+
+    // 효과 설명
+    let desc = '';
+    if (item.type === 'consumable') desc = `${item.stat} +${item.value}`;
+    else {
+      const parts = [];
+      if (item.attack) parts.push(`공격 +${item.attack}`);
+      if (item.defense) parts.push(`방어 +${item.defense}`);
+      if (item.speed) parts.push(`속도 +${item.speed}`);
+      desc = parts.join(' ');
+    }
+
+    const owned = game.state.inventory && game.state.inventory.includes(id);
+    const equipped = game.state.equippedWeapon === id || game.state.equippedAccessory === id;
+    const canAfford = (game.state.coins || 0) >= item.price;
+
+    let btnHtml = '';
+    if (item.type === 'consumable') {
+      btnHtml = `<button class="shop-item-btn buy" ${!canAfford ? 'disabled' : ''} data-action="buy" data-id="${id}">${item.price}💰</button>`;
+    } else if (equipped) {
+      btnHtml = `<button class="shop-item-btn unequip" data-action="unequip" data-id="${id}" data-slot="${item.type === 'weapon' ? 'weapon' : 'accessory'}">해제</button>`;
+    } else if (owned) {
+      btnHtml = `<button class="shop-item-btn equip" data-action="equip" data-id="${id}">장착</button>`;
+    } else {
+      btnHtml = `<button class="shop-item-btn buy" ${!canAfford ? 'disabled' : ''} data-action="buy" data-id="${id}">${item.price}💰</button>`;
+    }
+
+    div.innerHTML = `
+      <div class="shop-item-icon">${item.icon}</div>
+      <div class="shop-item-info">
+        <div class="shop-item-name">${item.name}</div>
+        <div class="shop-item-desc">${desc}</div>
+      </div>
+      ${btnHtml}
+    `;
+
+    div.querySelector('.shop-item-btn').addEventListener('click', (e) => {
+      const action = e.target.dataset.action;
+      const itemId = e.target.dataset.id;
+
+      if (action === 'buy') {
+        const result = game.buyItem(itemId);
+        if (result.success) {
+          showNotification(result.msg);
+          game.save();
+        } else {
+          showNotification(result.msg);
+        }
+      } else if (action === 'equip') {
+        game.equipItem(itemId);
+        showNotification(`${SHOP_ITEMS[itemId].name} 장착!`);
+        game.save();
+      } else if (action === 'unequip') {
+        game.unequipItem(e.target.dataset.slot);
+        showNotification('장비 해제');
+        game.save();
+      }
+
+      shopCoinDisplay.textContent = game.state.coins || 0;
+      renderShopItems(currentShopTab);
+    });
+
+    shopItems.appendChild(div);
+  });
+}
+
+// 상점 패널에 마우스 이벤트 등록
+shopPanel.addEventListener('mouseenter', onInteractiveEnter);
+shopPanel.addEventListener('mouseleave', onInteractiveLeave);
 
 boot();
 
@@ -132,8 +244,28 @@ function renderState(state, emotion) {
   stageLabel.textContent = game.getStageName();
   ageLabel.textContent = game.getAgeDays() + '일';
 
+  // 전투력 / 코인 / 등급
+  const powerLabel = document.getElementById('power-label');
+  const coinLabel = document.getElementById('coin-label');
+  const gradeLabel = document.getElementById('grade-label');
+  if (powerLabel) powerLabel.textContent = game.getTotalPower();
+  if (coinLabel) coinLabel.textContent = state.coins || 0;
+  if (gradeLabel && state.growthGrade) {
+    const grades = { low: '하', mid: '중', high: '상' };
+    gradeLabel.textContent = grades[state.growthGrade] || '';
+    gradeLabel.className = 'grade-badge grade-' + state.growthGrade;
+  }
+
   // 픽셀아트 스프라이트 그리기
   drawPixelSprite(petCtx, state.stage, emotion);
+
+  // 장비 오버레이
+  const spriteData = ALL_SPRITES[currentCreatureType] && ALL_SPRITES[currentCreatureType][state.stage];
+  if (spriteData && spriteData.face) {
+    const weaponPixel = state.equippedWeapon && SHOP_ITEMS[state.equippedWeapon] ? SHOP_ITEMS[state.equippedWeapon].pixel : null;
+    const accPixel = state.equippedAccessory && SHOP_ITEMS[state.equippedAccessory] ? SHOP_ITEMS[state.equippedAccessory].pixel : null;
+    drawEquipment(petCtx, spriteData.face, weaponPixel, accPixel);
+  }
 
   // 알 단계 흔들림 애니메이션
   petEl.className = 'pet';
@@ -326,6 +458,12 @@ petContainer.addEventListener('contextmenu', (e) => {
     showNotification(on ? '🤖 자동 돌봄 ON' : '🤖 자동 돌봄 OFF');
     removeContextMenu();
   }, { active: state.autoCare }));
+
+  // 상점
+  contextMenu.appendChild(createMenuItem('💰', '상점', () => {
+    openShop();
+    removeContextMenu();
+  }));
 
   // 위치
   contextMenu.style.left = e.clientX + 'px';
