@@ -186,6 +186,40 @@ html, body {
   margin-top: 4px;
 }
 
+.status-relations {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid #eee;
+}
+.status-relations.hidden { display: none; }
+
+.relation-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  color: #555;
+  margin-bottom: 2px;
+}
+.relation-name { min-width: 40px; font-weight: bold; }
+.relation-bar {
+  flex: 1;
+  height: 6px;
+  background: #eee;
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+.relation-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s;
+}
+.relation-fill.positive { background: linear-gradient(90deg, #66bb6a, #43a047); }
+.relation-fill.negative { background: linear-gradient(90deg, #ef5350, #e53935); }
+.relation-value { min-width: 28px; text-align: right; font-size: 9px; }
+.relation-icon { font-size: 10px; }
+
 .status-parents {
   text-align: center;
   font-size: 10px;

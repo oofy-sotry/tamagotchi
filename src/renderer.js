@@ -120,6 +120,69 @@ window.api.onWorldEvent((data) => {
   }
 });
 
+// ─── 친밀도 표시 ─────────────────────────────────
+let cachedRelations = null;
+let lastRelationFetch = 0;
+
+async function updateRelations() {
+  const now = Date.now();
+  // 10초마다 갱신
+  if (now - lastRelationFetch < 10000 && cachedRelations) {
+    renderRelations(cachedRelations);
+    return;
+  }
+  lastRelationFetch = now;
+
+  try {
+    const world = await window.api.getWorld();
+    cachedRelations = world.relationships || {};
+    renderRelations(cachedRelations);
+  } catch (e) { /* ignore */ }
+}
+
+function renderRelations(relationships) {
+  const container = document.getElementById('relations-list');
+  if (!container) return;
+
+  const name = myPetName || (game.state && game.state.petName) || '';
+  if (!name) { container.classList.add('hidden'); return; }
+
+  // 내가 포함된 관계만 필터
+  const myRelations = [];
+  for (const [key, rel] of Object.entries(relationships)) {
+    const [a, b] = key.split(':');
+    if (a === name) myRelations.push({ partner: b, affinity: rel.affinity });
+    else if (b === name) myRelations.push({ partner: a, affinity: rel.affinity });
+  }
+
+  if (myRelations.length === 0) { container.classList.add('hidden'); return; }
+
+  container.classList.remove('hidden');
+  container.innerHTML = myRelations.map(r => {
+    const aff = r.affinity;
+    const isPositive = aff >= 0;
+    const pct = Math.abs(aff); // -100~100 → 0~100
+    let icon = '😐';
+    if (aff >= 80) icon = '💕';
+    else if (aff >= 40) icon = '😊';
+    else if (aff >= 0) icon = '🙂';
+    else if (aff >= -40) icon = '😤';
+    else icon = '😡';
+
+    // 결혼 체크
+    const married = (cachedRelations && Object.keys(cachedRelations).length) ? false : false; // 간소화
+
+    return `<div class="relation-row">
+      <span class="relation-icon">${icon}</span>
+      <span class="relation-name">${r.partner}</span>
+      <div class="relation-bar">
+        <div class="relation-fill ${isPositive ? 'positive' : 'negative'}" style="width:${pct}%"></div>
+      </div>
+      <span class="relation-value" style="color:${isPositive ? '#43a047' : '#e53935'}">${aff >= 0 ? '+' : ''}${aff}</span>
+    </div>`;
+  }).join('');
+}
+
 // ─── 상점 UI ─────────────────────────────────────
 const shopPanel = document.getElementById('shop-panel');
 const shopItems = document.getElementById('shop-items');
@@ -256,6 +319,9 @@ function renderState(state, emotion) {
     parentsInfo.classList.remove('hidden');
     parentsInfo.textContent = `👨‍👩‍👧 ${state.parents.parent1} ♥ ${state.parents.parent2}`;
   }
+
+  // 친밀도 목록 업데이트
+  updateRelations();
 
   // 전투력 / 코인 / 등급
   const powerLabel = document.getElementById('power-label');
