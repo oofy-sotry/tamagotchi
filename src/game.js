@@ -223,6 +223,42 @@ function rollPersonality() {
   return PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)].id;
 }
 
+// ─── MBTI 시스템 ────────────────────────────────
+// 4개 축: E/I, S/N, T/F, J/P
+const MBTI_AXES = ['EI', 'SN', 'TF', 'JP'];
+
+function rollMbti() {
+  return MBTI_AXES.map(axis => axis[Math.random() < 0.5 ? 0 : 1]).join('');
+}
+
+// MBTI 궁합 점수: 같은 축 = +0.5, 다른 축 = 확률적 감점
+// 반환: -2 ~ +2 (4축 각각 -0.5 ~ +0.5)
+function getMbtiCompatibility(mbti1, mbti2) {
+  if (!mbti1 || !mbti2 || mbti1.length !== 4 || mbti2.length !== 4) return 0;
+  let score = 0;
+  for (let i = 0; i < 4; i++) {
+    if (mbti1[i] === mbti2[i]) {
+      score += 0.5; // 같은 성향 = 편안함
+    } else {
+      // 반대 성향: 보완이 될 수도 있고 충돌할 수도 있음
+      // T/F 축이 다르면 충돌 확률 높음 (감정 vs 논리)
+      // E/I 축이 다르면 오히려 보완될 수 있음
+      if (i === 0) score += 0.1;   // E/I 다름 = 약간 보완
+      else if (i === 1) score -= 0.2; // S/N 다름 = 소통 차이
+      else if (i === 2) score -= 0.4; // T/F 다름 = 가치관 차이 (가장 큰 충돌)
+      else score -= 0.2;              // J/P 다름 = 생활 차이
+    }
+  }
+  return score; // -0.3 ~ +2.0 범위
+}
+
+// 최종 궁합: 성격(-1~1) + MBTI(-0.3~2.0) 합산
+function getTotalCompatibility(personality1, personality2, mbti1, mbti2) {
+  const pCompat = getCompatibility(personality1, personality2);
+  const mCompat = getMbtiCompatibility(mbti1, mbti2);
+  return pCompat + mCompat; // -1.3 ~ +3.0 범위
+}
+
 // ─── 자동 돌봄 ──────────────────────────────────
 const AUTO_CARE_INTERVAL = 5;  // 5틱(25초)마다 자동 돌봄 체크
 const AUTO_FEED_THRESHOLD = 60;
@@ -261,6 +297,7 @@ function createDefaultState() {
     colorVariant: null, // 색상 변형 (null = 미선택)
     petName: '',        // 펫 이름
     personality: null,  // 성격 (brave, gentle, playful 등)
+    mbti: null,         // MBTI (ENFP, ISTJ 등)
     // 전투 스탯
     combatStats: { attack: 0, defense: 0, speed: 0 },
     growthGrade: null,    // 'low' | 'mid' | 'high'
@@ -305,8 +342,9 @@ class TamagotchiGame {
     this.state.creatureType = type;
     this.state.colorVariant = colorVariant || 'orange';
     this.state.petName = petName || '';
-    // 성격 & 성장 등급 & 초기 스탯 결정
+    // 성격 & MBTI & 성장 등급 & 초기 스탯 결정
     this.state.personality = rollPersonality();
+    this.state.mbti = rollMbti();
     this.state.growthGrade = rollGrowthGrade();
     this.state.growthRolls = rollGrowthValues(this.state.growthGrade);
     this.state.combatStats = rollInitialStats();

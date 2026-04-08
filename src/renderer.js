@@ -313,11 +313,13 @@ function renderState(state, emotion) {
   stageLabel.textContent = game.getStageName();
   ageLabel.textContent = game.getAgeDays() + '살';
 
-  // 성격 표시
+  // 성격 + MBTI 표시
   const personalityLabel = document.getElementById('personality-label');
-  if (personalityLabel && state.personality) {
-    const p = PERSONALITIES.find(pp => pp.id === state.personality);
-    personalityLabel.textContent = p ? p.emoji + p.name : '';
+  if (personalityLabel) {
+    const p = state.personality ? PERSONALITIES.find(pp => pp.id === state.personality) : null;
+    const pText = p ? p.emoji + p.name : '';
+    const mText = state.mbti || '';
+    personalityLabel.textContent = [pText, mText].filter(Boolean).join(' ');
   }
 
   // 부모 정보

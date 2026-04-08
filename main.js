@@ -380,11 +380,22 @@ function getCompatibility(p1, p2) {
   return 0;
 }
 
-function getPetPersonality(name) {
+function getPetTraits(name) {
   try {
     const data = JSON.parse(fs.readFileSync(path.join(PETS_DIR, name + '.json'), 'utf-8'));
-    return data.personality || null;
-  } catch (e) { return null; }
+    return { personality: data.personality || null, mbti: data.mbti || null };
+  } catch (e) { return { personality: null, mbti: null }; }
+}
+
+// MBTI 궁합 (game.js와 동일 로직)
+function getMbtiCompat(m1, m2) {
+  if (!m1 || !m2 || m1.length !== 4 || m2.length !== 4) return 0;
+  let score = 0;
+  const weights = [0.1, -0.2, -0.4, -0.2]; // E/I, S/N, T/F, J/P 반대일때
+  for (let i = 0; i < 4; i++) {
+    score += (m1[i] === m2[i]) ? 0.5 : weights[i];
+  }
+  return score;
 }
 
 function handleNearby(name1, name2) {
@@ -394,24 +405,27 @@ function handleNearby(name1, name2) {
   }
   const rel = worldData.relationships[key];
 
-  // 성격 궁합 확인
-  const p1 = getPetPersonality(name1);
-  const p2 = getPetPersonality(name2);
-  const compat = (p1 && p2) ? getCompatibility(p1, p2) : 0;
-  // compat: 1=좋음, 0=보통, -1=나쁨
+  // 성격 + MBTI 궁합 확인
+  const t1 = getPetTraits(name1);
+  const t2 = getPetTraits(name2);
+  const pCompat = (t1.personality && t2.personality) ? getCompatibility(t1.personality, t2.personality) : 0;
+  const mCompat = getMbtiCompat(t1.mbti, t2.mbti);
+  const totalCompat = pCompat + mCompat; // -1.3 ~ +3.0
 
-  // 근처에 있으면 기본 친밀도 변화 (궁합에 따라)
-  if (compat === 1) {
-    rel.affinity = Math.min(100, rel.affinity + 2);  // 좋은 궁합: +2
-  } else if (compat === -1) {
-    rel.affinity = Math.max(-100, rel.affinity - 1);  // 나쁜 궁합: -1
+  // 총 궁합에 따라 친밀도 변화
+  if (totalCompat >= 1.5) {
+    rel.affinity = Math.min(100, rel.affinity + 3);  // 최고 궁합
+  } else if (totalCompat >= 0.5) {
+    rel.affinity = Math.min(100, rel.affinity + 2);  // 좋은 궁합
+  } else if (totalCompat >= -0.5) {
+    rel.affinity = Math.min(100, rel.affinity + 1);  // 보통
   } else {
-    rel.affinity = Math.min(100, rel.affinity + 1);  // 보통: +1
+    rel.affinity = Math.max(-100, rel.affinity - 1);  // 나쁜 궁합
   }
 
   // 랜덤 변동 (궁합에 따라 확률 조절)
-  const positiveChance = compat === 1 ? 0.20 : compat === -1 ? 0.05 : 0.10;
-  const negativeChance = compat === 1 ? 0.02 : compat === -1 ? 0.15 : 0.05;
+  const positiveChance = totalCompat >= 1.0 ? 0.25 : totalCompat >= 0 ? 0.10 : 0.03;
+  const negativeChance = totalCompat <= -0.5 ? 0.20 : totalCompat <= 0 ? 0.08 : 0.02;
 
   if (Math.random() < positiveChance) rel.affinity = Math.min(100, rel.affinity + Math.floor(Math.random() * 4) + 2);
   if (Math.random() < negativeChance) rel.affinity = Math.max(-100, rel.affinity - Math.floor(Math.random() * 4) - 1);
@@ -643,6 +657,7 @@ function createEggPet(parent1Name, parent2Name) {
       coins: 0, equippedWeapon: null, equippedAccessory: null, inventory: [],
       // 부모 정보
       personality: ['brave','gentle','playful','lazy','proud','shy','greedy','caring'][Math.floor(Math.random()*8)],
+      mbti: ['EI','SN','TF','JP'].map(a => a[Math.random()<0.5?0:1]).join(''),
       parents: { parent1: parent1Name, parent2: parent2Name },
     };
 
