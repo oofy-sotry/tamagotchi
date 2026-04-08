@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>다마고치 - 펫 관리</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+    body {
+      font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+      background: rgba(255,255,255,0.97);
+      border-radius: 16px;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 타이틀바 (드래그 영역) */
+    .titlebar {
+      -webkit-app-region: drag;
+      padding: 14px 16px 8px;
+      font-size: 15px;
+      font-weight: bold;
+      color: #333;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .titlebar-btn {
+      -webkit-app-region: no-drag;
+      background: none;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      opacity: 0.5;
+      transition: opacity 0.2s;
+    }
+    .titlebar-btn:hover { opacity: 1; }
+
+    /* 펫 목록 */
+    .pet-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 16px;
+    }
+
+    .pet-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.15s;
+      margin-bottom: 6px;
+    }
+    .pet-card:hover { background: rgba(0,0,0,0.04); }
+    .pet-card.is-open { opacity: 0.5; cursor: default; }
+    .pet-card.is-dead { opacity: 0.4; }
+
+    .pet-card-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .pet-card-info { flex: 1; }
+    .pet-card-name { font-size: 13px; font-weight: bold; color: #333; }
+    .pet-card-detail { font-size: 11px; color: #888; margin-top: 2px; }
+    .pet-card-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 8px;
+      background: #eee;
+      color: #666;
+    }
+    .pet-card-badge.open { background: #d4edda; color: #155724; }
+    .pet-card-badge.dead { background: #f8d7da; color: #721c24; }
+
+    .pet-card-delete {
+      background: none;
+      border: none;
+      font-size: 14px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s;
+      padding: 4px;
+    }
+    .pet-card:hover .pet-card-delete { opacity: 0.4; }
+    .pet-card-delete:hover { opacity: 1 !important; }
+
+    /* 빈 상태 */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #aaa;
+      font-size: 13px;
+    }
+    .empty-state .emoji { font-size: 40px; margin-bottom: 10px; }
+
+    /* 새 펫 버튼 */
+    .new-pet-btn {
+      margin: 12px 16px 16px;
+      padding: 12px;
+      background: #ff6600;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .new-pet-btn:hover { background: #cc4400; }
+
+    /* 이름 입력 오버레이 */
+    .name-overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(255,255,255,0.95);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+    .name-overlay.hidden { display: none; }
+    .name-box {
+      text-align: center;
+      padding: 20px;
+    }
+    .name-box-title { font-size: 14px; font-weight: bold; color: #333; margin-bottom: 12px; }
+    .name-box input {
+      width: 180px;
+      padding: 8px 12px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      text-align: center;
+      outline: none;
+    }
+    .name-box input:focus { border-color: #ff8833; }
+    .name-box-error { font-size: 11px; color: #e33; margin-top: 6px; min-height: 16px; }
+    .name-box-buttons { margin-top: 10px; display: flex; gap: 8px; justify-content: center; }
+    .name-box-buttons button {
+      padding: 8px 18px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .btn-confirm { background: #ff6600; color: white; }
+    .btn-confirm:hover { background: #cc4400; }
+    .btn-cancel { background: #eee; color: #666; }
+    .btn-cancel:hover { background: #ddd; }
+  </style>
+</head>
+<body>
+  <div class="titlebar">
+    <span>🐾 내 펫들</span>
+    <button class="titlebar-btn" id="close-btn">✕</button>
+  </div>
+
+  <div class="pet-list" id="pet-list"></div>
+
+  <button class="new-pet-btn" id="new-pet-btn">
+    <span>+</span> 새 펫 만들기
+  </button>
+
+  <!-- 이름 입력 오버레이 -->
+  <div class="name-overlay hidden" id="name-overlay">
+    <div class="name-box">
+      <div class="name-box-title">새 펫의 이름을 입력하세요</div>
+      <input type="text" id="new-name-input" maxlength="10" placeholder="이름 입력...">
+      <div class="name-box-error" id="name-error"></div>
+      <div class="name-box-buttons">
+        <button class="btn-cancel" id="name-cancel">취소</button>
+        <button class="btn-confirm" id="name-confirm">만들기</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="launcher.js"></script>
+</body>
+</html>
