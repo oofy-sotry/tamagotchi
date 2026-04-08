@@ -446,22 +446,22 @@ function triggerBattle(name1, name2) {
 // 결혼 시스템
 // ═════════════════════════════════════════════════
 
+function isAlreadyMarried(name) {
+  return worldData.marriages.some(m => m.pet1 === name || m.pet2 === name);
+}
+
 function checkMarriage(name1, name2, affinity) {
   if (affinity < 80) return;
 
-  // 이미 결혼했는지 체크
-  const existing = worldData.marriages.find(m =>
-    (m.pet1 === name1 && m.pet2 === name2) || (m.pet1 === name2 && m.pet2 === name1)
-  );
-  if (existing) return;
+  // 일부일처: 둘 중 하나라도 이미 결혼했으면 불가
+  if (isAlreadyMarried(name1) || isAlreadyMarried(name2)) return;
 
   // 결혼 등록
   worldData.marriages.push({
     pet1: name1,
     pet2: name2,
     marriedAt: Date.now(),
-    eggLaid: false,
-    lastEggCheck: Date.now(),
+    lastEggTime: 0, // 마지막 알 낳은 시간 (0 = 아직 안 낳음)
   });
   saveWorld(worldData);
 
@@ -476,29 +476,42 @@ function checkMarriage(name1, name2, affinity) {
 // 알 낳기 시스템 (점진적 확률)
 // ═════════════════════════════════════════════════
 
+// 1게임일 = 1시간
+const EGG_COOLDOWN_DAYS = 20; // 알 낳은 후 20일(20시간) 쿨타임
+const EGG_MIN_MARRIAGE_DAYS = 1; // 결혼 후 최소 1일(1시간) 경과
+const EGG_BASE_CHANCE = 0.50; // 시작 확률 50%
+const EGG_DAILY_INCREASE = 0.01; // 하루당 +1%
+const EGG_MAX_CHANCE = 0.95;
+const ONE_GAME_DAY = 60 * 60 * 1000; // 1시간 = 1게임일
+
 function checkEgg(name1, name2) {
   const marriage = worldData.marriages.find(m =>
-    !m.eggLaid &&
     ((m.pet1 === name1 && m.pet2 === name2) || (m.pet1 === name2 && m.pet2 === name1))
   );
   if (!marriage) return;
 
-  const elapsed = Date.now() - marriage.marriedAt;
-  const thirtyMin = 30 * 60 * 1000;
-  if (elapsed < thirtyMin) return;
+  const now = Date.now();
 
-  // 마지막 체크에서 30분 경과했는지
-  const sinceLastCheck = Date.now() - (marriage.lastEggCheck || marriage.marriedAt);
-  if (sinceLastCheck < thirtyMin) return;
+  // 결혼 후 최소 1일 경과해야 함
+  const marriageDays = (now - marriage.marriedAt) / ONE_GAME_DAY;
+  if (marriageDays < EGG_MIN_MARRIAGE_DAYS) return;
 
-  marriage.lastEggCheck = Date.now();
+  // 알 쿨타임 체크 (마지막 알 낳은 후 20일)
+  if (marriage.lastEggTime) {
+    const sinceLast = (now - marriage.lastEggTime) / ONE_GAME_DAY;
+    if (sinceLast < EGG_COOLDOWN_DAYS) return;
+  }
 
-  // 확률 계산: 50% + (경과 30분 단위 - 1) * 5%, 최대 95%
-  const periods = Math.floor(elapsed / thirtyMin);
-  const chance = Math.min(0.95, 0.5 + (periods - 1) * 0.05);
+  // 확률 계산: 기준 시점부터 경과 일수로 확률 증가
+  const baseTime = marriage.lastEggTime || marriage.marriedAt;
+  const daysSinceBase = Math.floor((now - baseTime) / ONE_GAME_DAY);
+  const extraDays = marriage.lastEggTime
+    ? Math.max(0, daysSinceBase - EGG_COOLDOWN_DAYS)
+    : Math.max(0, daysSinceBase - EGG_MIN_MARRIAGE_DAYS);
+  const chance = Math.min(EGG_MAX_CHANCE, EGG_BASE_CHANCE + extraDays * EGG_DAILY_INCREASE);
 
   if (Math.random() < chance) {
-    marriage.eggLaid = true;
+    marriage.lastEggTime = now;
     saveWorld(worldData);
 
     // 양쪽에 알 이벤트 알림
