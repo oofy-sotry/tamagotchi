@@ -158,9 +158,13 @@
     }
     .empty-state .emoji { font-size: 40px; margin-bottom: 10px; }
 
-    /* 새 펫 버튼 */
+    /* 새 펫 버튼 영역 */
+    .bottom-bar {
+      padding: 8px 16px 12px;
+      flex-shrink: 0;
+    }
     .new-pet-btn {
-      margin: 8px 16px 12px;
+      width: 100%;
       padding: 10px;
       background: #ff6600;
       color: white;
@@ -216,12 +220,17 @@
     .btn-confirm:hover { background: #cc4400; }
     .btn-cancel { background: #eee; color: #666; }
     .btn-cancel:hover { background: #ddd; }
+
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
   <div class="titlebar">
     <span>🐾 내 펫들</span>
-    <button class="titlebar-btn" id="close-btn">✕</button>
+    <div style="display:flex;gap:14px;">
+      <button class="titlebar-btn" id="minimize-btn">−</button>
+      <button class="titlebar-btn" id="close-btn">✕</button>
+    </div>
   </div>
 
   <div class="launcher-tabs">
@@ -231,6 +240,10 @@
 
   <div class="pet-list" id="pet-list"></div>
   <div class="pet-list hidden" id="grave-list"></div>
+
+  <div class="bottom-bar" id="bottom-bar">
+    <button class="new-pet-btn" id="new-pet-btn"><span>+</span> 새 펫 만들기</button>
+  </div>
 
   <!-- 이름 입력 오버레이 -->
   <div class="name-overlay hidden" id="name-overlay">

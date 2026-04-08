@@ -64,7 +64,6 @@ function createLauncher() {
     resizable: false,
     transparent: true,
     hasShadow: true,
-    alwaysOnTop: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -281,6 +280,14 @@ ipcMain.handle('get-pet-name', (event) => {
 ipcMain.handle('close-launcher', () => {
   if (launcherWindow && !launcherWindow.isDestroyed()) {
     launcherWindow.hide();
+  }
+  return { success: true };
+});
+
+// ── 런처 최소화 ──
+ipcMain.handle('minimize-launcher', () => {
+  if (launcherWindow && !launcherWindow.isDestroyed()) {
+    launcherWindow.minimize();
   }
   return { success: true };
 });

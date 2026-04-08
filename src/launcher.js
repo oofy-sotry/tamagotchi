@@ -5,6 +5,9 @@ const nameError = document.getElementById('name-error');
 const nameConfirm = document.getElementById('name-confirm');
 const nameCancel = document.getElementById('name-cancel');
 const closeBtn = document.getElementById('close-btn');
+const minimizeBtn = document.getElementById('minimize-btn');
+const bottomBar = document.getElementById('bottom-bar');
+const newPetBtn = document.getElementById('new-pet-btn');
 
 const CREATURE_ICONS = {
   dragon: '🐉',
@@ -88,13 +91,6 @@ async function loadPetList() {
     });
   }
 
-  // 목록 끝에 "새 펫 만들기" 버튼
-  const addBtn = document.createElement('button');
-  addBtn.className = 'new-pet-btn';
-  addBtn.style.margin = '8px 0';
-  addBtn.innerHTML = '<span>+</span> 새 펫 만들기';
-  addBtn.addEventListener('click', showNameOverlay);
-  petList.appendChild(addBtn);
 }
 
 // ─── 묘지 목록 ───────────────────────────────────
@@ -107,6 +103,7 @@ tabAlive.addEventListener('click', () => {
   tabGrave.classList.remove('active');
   petList.classList.remove('hidden');
   graveList.classList.add('hidden');
+  bottomBar.classList.remove('hidden');
 });
 
 tabGrave.addEventListener('click', () => {
@@ -114,6 +111,7 @@ tabGrave.addEventListener('click', () => {
   tabAlive.classList.remove('active');
   graveList.classList.remove('hidden');
   petList.classList.add('hidden');
+  bottomBar.classList.add('hidden');
   loadGraveList();
 });
 
@@ -205,7 +203,14 @@ async function createNewPet() {
   loadPetList();
 }
 
-// ─── 닫기 버튼 ───────────────────────────────────
+// ─── 새 펫 버튼 ──────────────────────────────────
+newPetBtn.addEventListener('click', showNameOverlay);
+
+// ─── 윈도우 버튼 ──────────────────────────────────
+minimizeBtn.addEventListener('click', () => {
+  window.api.minimizeLauncher();
+});
+
 closeBtn.addEventListener('click', () => {
   window.api.closeLauncher();
 });

@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('api', {
   deletePet: (name) => ipcRenderer.invoke('delete-pet', name),
   getPetName: () => ipcRenderer.invoke('get-pet-name'),
   closeLauncher: () => ipcRenderer.invoke('close-launcher'),
+  minimizeLauncher: () => ipcRenderer.invoke('minimize-launcher'),
 
   // 게임 저장/불러오기 (sender 기반 라우팅)
   saveGame: (data) => ipcRenderer.invoke('save-game', data),
