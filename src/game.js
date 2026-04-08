@@ -137,7 +137,21 @@ const ACTION_EXP = {
   medicine: 10,
   pet: 2,
   cleanPoop: 3,
+  work: 12,
 };
+
+// ─── 일하기 시스템 ──────────────────────────────
+const WORK_COINS_BASE = 15;      // 기본 코인
+const WORK_HEALTH_COST = 30;     // 체력 소모
+const WORK_ENERGY_COST = 40;     // 에너지 소모
+const WORK_HUNGER_COST = 20;     // 배고픔 소모
+const WORK_HAPPINESS_COST = 10;  // 행복 소모
+
+// ─── 게이지 최대치 성장 ─────────────────────────
+// 기본 100, 레벨당 +5, 진화당 +20
+const BASE_GAUGE_MAX = 100;
+const GAUGE_PER_LEVEL = 5;
+const GAUGE_PER_EVOLUTION = 20;
 
 // ─── 자동 돌봄 ──────────────────────────────────
 const AUTO_CARE_INTERVAL = 5;  // 5틱(25초)마다 자동 돌봄 체크
@@ -171,6 +185,8 @@ function createDefaultState() {
     level: 1,
     exp: 0,
     autoCare: false,   // 자동 돌봄 on/off
+    isWorking: false,  // 일 중 여부
+    gaugeMax: 100,     // 게이지 최대치 (레벨/진화로 성장)
     creatureType: null, // 캐릭터 타입 (null = 미선택)
     colorVariant: null, // 색상 변형 (null = 미선택)
     petName: '',        // 펫 이름
@@ -271,9 +287,9 @@ class TamagotchiGame {
     s.age++;
 
     if (s.isSleeping) {
-      s.health = Math.min(100, s.health + 3);
+      s.health = Math.min(s.gaugeMax || 100, s.health + 3);
       s.hunger = Math.max(0, s.hunger - GAUGE_DECAY * 0.5);
-      s.energy = Math.min(100, s.energy + ENERGY_RECOVER);
+      s.energy = Math.min(s.gaugeMax || 100, s.energy + ENERGY_RECOVER);
 
       // 에너지 충전 완료 → 자동 기상
       if (s.energy >= AUTO_WAKE_THRESHOLD) {
@@ -367,10 +383,11 @@ class TamagotchiGame {
         s.combatStats.defense += bonus.defense;
         s.combatStats.speed += bonus.speed;
       }
-      s.coins = (s.coins || 0) + 30; // 진화 보너스 코인
+      s.coins = (s.coins || 0) + 30;
+      s.gaugeMax = (s.gaugeMax || 100) + GAUGE_PER_EVOLUTION; // 게이지 최대치 대폭 성장
       const names = ALL_STAGE_NAMES[s.creatureType || 'dragon'];
       const name = (names && names[newStage]) || newStage;
-      this.notify(`✨ ${name}(으)로 진화했어요! (스탯 대폭 ↑)`);
+      this.notify(`✨ ${name}(으)로 진화! (최대치 ${s.gaugeMax})`);
       if (this.onEvolve) this.onEvolve(newStage, name);
     }
   }
@@ -390,8 +407,9 @@ class TamagotchiGame {
         s.combatStats.defense += s.growthRolls.defense;
         s.combatStats.speed += s.growthRolls.speed;
       }
-      s.coins = (s.coins || 0) + 10; // 렙업 보너스 코인
-      this.notify(`🎉 레벨 ${s.level} 달성! (스탯 ↑)`);
+      s.coins = (s.coins || 0) + 10;
+      s.gaugeMax = (s.gaugeMax || 100) + GAUGE_PER_LEVEL; // 게이지 최대치 성장
+      this.notify(`🎉 레벨 ${s.level} (최대치 ${s.gaugeMax}) 달성!`);
       if (this.onLevelUp) this.onLevelUp(s.level);
     }
   }
@@ -402,6 +420,14 @@ class TamagotchiGame {
 
   getExpPercent() {
     return Math.floor((this.state.exp / this.getExpNeeded()) * 100);
+  }
+
+  getGaugeMax() {
+    return this.state.gaugeMax || 100;
+  }
+
+  capGauge(value) {
+    return Math.min(this.getGaugeMax(), Math.max(0, value));
   }
 
   // --- 자동 돌봄 ---
@@ -433,7 +459,7 @@ class TamagotchiGame {
     }
     // 체력이 낮으면 자동 휴식
     if (s.health < AUTO_HEALTH_THRESHOLD) {
-      s.health = Math.min(100, s.health + 15);
+      s.health = Math.min(s.gaugeMax || 100, s.health + 15);
       this.notify('🤖 자동으로 휴식했어요');
     }
   }
@@ -524,6 +550,28 @@ class TamagotchiGame {
     this.gainExp(ACTION_EXP.pet);
     this.earnCoins('pet');
     this.emitUpdate();
+  }
+
+  // --- 일하기 ---
+
+  work() {
+    if (this.state.isDead || this.state.isSleeping) return { success: false, msg: '지금은 일할 수 없어요' };
+    if (this.state.energy < WORK_ENERGY_COST) return { success: false, msg: '에너지가 부족해요!' };
+    if (this.state.health < WORK_HEALTH_COST) return { success: false, msg: '체력이 부족해요!' };
+
+    const s = this.state;
+    s.health = Math.max(0, s.health - WORK_HEALTH_COST);
+    s.energy = Math.max(0, s.energy - WORK_ENERGY_COST);
+    s.hunger = Math.max(0, s.hunger - WORK_HUNGER_COST);
+    s.happiness = Math.max(0, s.happiness - WORK_HAPPINESS_COST);
+
+    // 코인 = 기본 + 레벨 보너스
+    const earned = WORK_COINS_BASE + Math.floor(s.level * 2);
+    s.coins = (s.coins || 0) + earned;
+
+    this.gainExp(ACTION_EXP.work);
+    this.emitUpdate();
+    return { success: true, msg: `💼 일 완료! +${earned}코인 (체력 -${WORK_HEALTH_COST})` };
   }
 
   // --- 상점 & 장비 ---

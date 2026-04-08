@@ -232,11 +232,13 @@ let playMode = null; // null | 'water' | 'ball'
 
 // ─── 상태 렌더링 ─────────────────────────────────
 function renderState(state, emotion) {
-  hungerBar.style.width = state.hunger + '%';
-  happinessBar.style.width = state.happiness + '%';
-  healthBar.style.width = state.health + '%';
-  cleanlinessBar.style.width = state.cleanliness + '%';
-  energyBar.style.width = state.energy + '%';
+  const gm = state.gaugeMax || 100;
+  const pct = (v) => Math.floor((v / gm) * 100) + '%';
+  hungerBar.style.width = pct(state.hunger);
+  happinessBar.style.width = pct(state.happiness);
+  healthBar.style.width = pct(state.health);
+  cleanlinessBar.style.width = pct(state.cleanliness);
+  energyBar.style.width = pct(state.energy);
 
   expBar.style.width = game.getExpPercent() + '%';
   levelLabel.textContent = 'Lv.' + state.level;
@@ -458,6 +460,13 @@ petContainer.addEventListener('contextmenu', (e) => {
     showNotification(on ? '🤖 자동 돌봄 ON' : '🤖 자동 돌봄 OFF');
     removeContextMenu();
   }, { active: state.autoCare }));
+
+  // 일하기
+  contextMenu.appendChild(createMenuItem('💼', '일하기', () => {
+    const result = game.work();
+    showNotification(result.msg);
+    removeContextMenu();
+  }));
 
   // 상점
   contextMenu.appendChild(createMenuItem('💰', '상점', () => {
