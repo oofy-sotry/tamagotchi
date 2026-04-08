@@ -200,6 +200,7 @@ ipcMain.handle('list-pets', () => {
           stage: data.stage || 'egg',
           isDead: data.isDead || false,
           personality: data.personality || null,
+          mbti: data.mbti || null,
           parents: data.parents || null,
           isOpen: petWindows.has(data.petName || f.replace('.json', '')),
         };

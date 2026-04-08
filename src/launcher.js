@@ -41,6 +41,13 @@ async function loadPetList() {
     const icon = CREATURE_ICONS[pet.creatureType] || '🥚';
     const typeName = CREATURE_NAMES[pet.creatureType] || '알';
     const parentText = pet.parents ? ` · ${pet.parents.parent1}♥${pet.parents.parent2}` : '';
+    const PERSONALITY_NAMES = {
+      brave:'🦁용감', gentle:'🕊️온화', playful:'🎪장난', lazy:'😴게으른',
+      proud:'👑도도', shy:'🙈수줍', greedy:'💰욕심', caring:'💗다정',
+    };
+    const pText = pet.personality ? (PERSONALITY_NAMES[pet.personality] || '') : '';
+    const mText = pet.mbti || '';
+    const traitText = [pText, mText].filter(Boolean).join(' ');
 
     let badgeHtml = '';
     if (pet.isOpen) badgeHtml = '<span class="pet-card-badge open">실행중</span>';
@@ -51,6 +58,7 @@ async function loadPetList() {
       <div class="pet-card-info">
         <div class="pet-card-name">${pet.name}</div>
         <div class="pet-card-detail">Lv.${pet.level} ${typeName}${parentText}</div>
+        ${traitText ? `<div class="pet-card-detail" style="font-size:10px;color:#aa7733;">${traitText}</div>` : ''}
       </div>
       ${badgeHtml}
       <button class="pet-card-delete" title="삭제">🗑</button>
