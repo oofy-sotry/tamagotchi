@@ -23,9 +23,6 @@ html, body {
   transform: translateX(-50%);
   cursor: grab;
   pointer-events: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   width: auto;
 }
 
@@ -123,6 +120,11 @@ html, body {
 
 /* ─── 상태 패널 ────────────────────────────────── */
 .status-panel {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 2px;
   background: rgba(255, 255, 255, 0.95);
   border-radius: 12px;
   padding: 10px 14px;
@@ -131,7 +133,6 @@ html, body {
   z-index: 100;
   transition: opacity 0.3s;
   pointer-events: auto;
-  margin-bottom: 6px;
 }
 
 .status-panel.hidden {
@@ -359,6 +360,10 @@ html, body {
 
 /* ─── 알림 말풍선 ──────────────────────────────── */
 .notification {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
   background: white;
   border-radius: 12px;
   padding: 6px 12px;
@@ -368,9 +373,6 @@ html, body {
   z-index: 200;
   transition: opacity 0.3s;
   pointer-events: none;
-  margin-bottom: 4px;
-  align-self: center;
-  position: relative;
 }
 
 .notification.hidden {

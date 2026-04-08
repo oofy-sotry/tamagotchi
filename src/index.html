@@ -31,50 +31,31 @@
 
   <!-- 캐릭터 -->
   <div id="pet-container">
-    <!-- 알림 말풍선 (컨테이너 기준) -->
-    <div id="notification" class="notification hidden"></div>
-
-    <!-- 상태 표시 (컨테이너 기준, 호버 시 표시) -->
-    <div id="status-panel" class="status-panel hidden">
-      <div class="gauge">
-        <span>🍖</span>
-        <div class="gauge-bar"><div class="gauge-fill hunger" id="hunger-bar"></div></div>
-      </div>
-      <div class="gauge">
-        <span>😊</span>
-        <div class="gauge-bar"><div class="gauge-fill happiness" id="happiness-bar"></div></div>
-      </div>
-      <div class="gauge">
-        <span>❤️</span>
-        <div class="gauge-bar"><div class="gauge-fill health" id="health-bar"></div></div>
-      </div>
-      <div class="gauge">
-        <span>🧼</span>
-        <div class="gauge-bar"><div class="gauge-fill cleanliness" id="cleanliness-bar"></div></div>
-      </div>
-      <div class="gauge">
-        <span>💤</span>
-        <div class="gauge-bar"><div class="gauge-fill energy" id="energy-bar"></div></div>
-      </div>
-      <div class="gauge">
-        <span>⭐</span>
-        <div class="gauge-bar"><div class="gauge-fill exp" id="exp-bar"></div></div>
-        <span class="gauge-label" id="level-label">Lv.1</span>
-      </div>
-      <div class="status-info">
-        <span id="stage-label">알</span> · <span id="age-label">0살</span> · <span id="personality-label"></span>
-      </div>
-      <div class="status-parents hidden" id="parents-info"></div>
-      <div class="status-relations hidden" id="relations-list"></div>
-      <div class="status-combat">
-        <span id="grade-label" class="grade-badge"></span>
-        <span>⚔️ <span id="power-label">0</span></span>
-        <span>💰 <span id="coin-label">0</span></span>
-      </div>
-    </div>
-
     <div id="pet" class="pet">
       <canvas id="pet-canvas"></canvas>
+
+      <!-- 알림 (펫 바로 위) -->
+      <div id="notification" class="notification hidden"></div>
+
+      <!-- 상태 패널 (펫 위, 호버 시) -->
+      <div id="status-panel" class="status-panel hidden">
+        <div class="gauge"><span>🍖</span><div class="gauge-bar"><div class="gauge-fill hunger" id="hunger-bar"></div></div></div>
+        <div class="gauge"><span>😊</span><div class="gauge-bar"><div class="gauge-fill happiness" id="happiness-bar"></div></div></div>
+        <div class="gauge"><span>❤️</span><div class="gauge-bar"><div class="gauge-fill health" id="health-bar"></div></div></div>
+        <div class="gauge"><span>🧼</span><div class="gauge-bar"><div class="gauge-fill cleanliness" id="cleanliness-bar"></div></div></div>
+        <div class="gauge"><span>💤</span><div class="gauge-bar"><div class="gauge-fill energy" id="energy-bar"></div></div></div>
+        <div class="gauge"><span>⭐</span><div class="gauge-bar"><div class="gauge-fill exp" id="exp-bar"></div></div><span class="gauge-label" id="level-label">Lv.1</span></div>
+        <div class="status-info">
+          <span id="stage-label">알</span> · <span id="age-label">0살</span> · <span id="personality-label"></span>
+        </div>
+        <div class="status-parents hidden" id="parents-info"></div>
+        <div class="status-relations hidden" id="relations-list"></div>
+        <div class="status-combat">
+          <span id="grade-label" class="grade-badge"></span>
+          <span>⚔️ <span id="power-label">0</span></span>
+          <span>💰 <span id="coin-label">0</span></span>
+        </div>
+      </div>
     </div>
     <div id="pet-name" class="pet-name"></div>
   </div>
