@@ -328,9 +328,20 @@ class TamagotchiGame {
     if (result.success && result.data.creatureType) {
       this.state = { ...createDefaultState(), ...result.data };
       if (!this.state.creatureType) this.state.creatureType = 'dragon';
+      // 기존 세이브 마이그레이션: 성격/MBTI/등급 없으면 자동 부여
+      if (!this.state.personality) this.state.personality = rollPersonality();
+      if (!this.state.mbti) this.state.mbti = rollMbti();
+      if (!this.state.growthGrade) {
+        this.state.growthGrade = rollGrowthGrade();
+        this.state.growthRolls = rollGrowthValues(this.state.growthGrade);
+      }
+      if (!this.state.combatStats || this.state.combatStats.attack === 0) {
+        this.state.combatStats = rollInitialStats();
+      }
       setCreatureType(this.state.creatureType);
       setColorVariant(this.state.colorVariant || 'orange');
       this.applyOfflineDecay(result.data.lastSaveTime);
+      this.save(); // 마이그레이션 결과 저장
       this.startTick();
       return { needsSelection: false };
     }
