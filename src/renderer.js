@@ -313,6 +313,13 @@ function renderState(state, emotion) {
   stageLabel.textContent = game.getStageName();
   ageLabel.textContent = game.getAgeDays() + '살';
 
+  // 성격 표시
+  const personalityLabel = document.getElementById('personality-label');
+  if (personalityLabel && state.personality) {
+    const p = PERSONALITIES.find(pp => pp.id === state.personality);
+    personalityLabel.textContent = p ? p.emoji + p.name : '';
+  }
+
   // 부모 정보
   const parentsInfo = document.getElementById('parents-info');
   if (parentsInfo && state.parents) {

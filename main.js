@@ -199,6 +199,7 @@ ipcMain.handle('list-pets', () => {
           level: data.level || 1,
           stage: data.stage || 'egg',
           isDead: data.isDead || false,
+          personality: data.personality || null,
           parents: data.parents || null,
           isOpen: petWindows.has(data.petName || f.replace('.json', '')),
         };
@@ -360,6 +361,32 @@ function getRelationshipKey(name1, name2) {
   return [name1, name2].sort().join(':');
 }
 
+// ─── 성격 궁합 (game.js와 동일) ──────────────────
+const COMPAT_MAP = {
+  'brave:gentle':1,'brave:proud':-1,'brave:shy':1,'brave:lazy':-1,
+  'gentle:caring':1,'gentle:greedy':-1,'gentle:playful':1,
+  'playful:lazy':-1,'playful:playful':1,'playful:proud':-1,
+  'lazy:lazy':1,'lazy:caring':-1,
+  'proud:proud':-1,'proud:shy':0,
+  'shy:caring':1,'shy:greedy':-1,
+  'greedy:greedy':-1,'greedy:brave':0,
+  'caring:caring':1,
+};
+
+function getCompatibility(p1, p2) {
+  const k1 = p1+':'+p2, k2 = p2+':'+p1;
+  if (COMPAT_MAP[k1] !== undefined) return COMPAT_MAP[k1];
+  if (COMPAT_MAP[k2] !== undefined) return COMPAT_MAP[k2];
+  return 0;
+}
+
+function getPetPersonality(name) {
+  try {
+    const data = JSON.parse(fs.readFileSync(path.join(PETS_DIR, name + '.json'), 'utf-8'));
+    return data.personality || null;
+  } catch (e) { return null; }
+}
+
 function handleNearby(name1, name2) {
   const key = getRelationshipKey(name1, name2);
   if (!worldData.relationships[key]) {
@@ -367,12 +394,27 @@ function handleNearby(name1, name2) {
   }
   const rel = worldData.relationships[key];
 
-  // 근처에 있으면 친밀도 +1
-  rel.affinity = Math.min(100, rel.affinity + 1);
+  // 성격 궁합 확인
+  const p1 = getPetPersonality(name1);
+  const p2 = getPetPersonality(name2);
+  const compat = (p1 && p2) ? getCompatibility(p1, p2) : 0;
+  // compat: 1=좋음, 0=보통, -1=나쁨
 
-  // 랜덤 변동
-  if (Math.random() < 0.1) rel.affinity = Math.min(100, rel.affinity + Math.floor(Math.random() * 4) + 2);
-  if (Math.random() < 0.05) rel.affinity = Math.max(-100, rel.affinity - Math.floor(Math.random() * 3) - 1);
+  // 근처에 있으면 기본 친밀도 변화 (궁합에 따라)
+  if (compat === 1) {
+    rel.affinity = Math.min(100, rel.affinity + 2);  // 좋은 궁합: +2
+  } else if (compat === -1) {
+    rel.affinity = Math.max(-100, rel.affinity - 1);  // 나쁜 궁합: -1
+  } else {
+    rel.affinity = Math.min(100, rel.affinity + 1);  // 보통: +1
+  }
+
+  // 랜덤 변동 (궁합에 따라 확률 조절)
+  const positiveChance = compat === 1 ? 0.20 : compat === -1 ? 0.05 : 0.10;
+  const negativeChance = compat === 1 ? 0.02 : compat === -1 ? 0.15 : 0.05;
+
+  if (Math.random() < positiveChance) rel.affinity = Math.min(100, rel.affinity + Math.floor(Math.random() * 4) + 2);
+  if (Math.random() < negativeChance) rel.affinity = Math.max(-100, rel.affinity - Math.floor(Math.random() * 4) - 1);
 
   saveWorld(worldData);
 
@@ -600,6 +642,7 @@ function createEggPet(parent1Name, parent2Name) {
       growthGrade: null, growthRolls: { attack: 0, defense: 0, speed: 0 },
       coins: 0, equippedWeapon: null, equippedAccessory: null, inventory: [],
       // 부모 정보
+      personality: ['brave','gentle','playful','lazy','proud','shy','greedy','caring'][Math.floor(Math.random()*8)],
       parents: { parent1: parent1Name, parent2: parent2Name },
     };
 

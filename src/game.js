@@ -176,6 +176,53 @@ const BASE_GAUGE_MAX = 100;
 const GAUGE_PER_LEVEL = 5;
 const GAUGE_PER_EVOLUTION = 20;
 
+// ─── 성격 시스템 ────────────────────────────────
+const PERSONALITIES = [
+  { id: 'brave',    name: '용감한',  emoji: '🦁' },
+  { id: 'gentle',   name: '온화한',  emoji: '🕊️' },
+  { id: 'playful',  name: '장난꾸러기', emoji: '🎪' },
+  { id: 'lazy',     name: '게으른',  emoji: '😴' },
+  { id: 'proud',    name: '도도한',  emoji: '👑' },
+  { id: 'shy',      name: '수줍은',  emoji: '🙈' },
+  { id: 'greedy',   name: '욕심많은', emoji: '💰' },
+  { id: 'caring',   name: '다정한',  emoji: '💗' },
+];
+
+// 궁합표: 1 = 좋음, 0 = 보통, -1 = 나쁨
+const COMPATIBILITY = {
+  'brave:gentle':   1,   // 용감+온화 = 서로 보완
+  'brave:proud':   -1,   // 용감+도도 = 충돌
+  'brave:shy':      1,   // 용감+수줍 = 보호해줌
+  'brave:lazy':    -1,   // 용감+게으른 = 답답함
+  'gentle:caring':  1,   // 온화+다정 = 천생연분
+  'gentle:greedy': -1,   // 온화+욕심 = 가치관 충돌
+  'gentle:playful': 1,   // 온화+장난 = 재밌게 어울림
+  'playful:lazy':  -1,   // 장난+게으른 = 놀아주지 않음
+  'playful:playful': 1,  // 장난+장난 = 같이 놀기
+  'playful:proud': -1,   // 장난+도도 = 짜증
+  'lazy:lazy':      1,   // 게으른+게으른 = 편안함
+  'lazy:caring':   -1,   // 게으른+다정 = 돌봐주는데 반응없음
+  'proud:proud':   -1,   // 도도+도도 = 서로 양보 안함
+  'proud:shy':      0,   // 도도+수줍 = 무관심
+  'shy:caring':     1,   // 수줍+다정 = 안심
+  'shy:greedy':    -1,   // 수줍+욕심 = 위축됨
+  'greedy:greedy': -1,   // 욕심+욕심 = 다툼
+  'greedy:brave':   0,   // 욕심+용감 = 보통
+  'caring:caring':  1,   // 다정+다정 = 최고
+};
+
+function getCompatibility(p1, p2) {
+  const key1 = p1 + ':' + p2;
+  const key2 = p2 + ':' + p1;
+  if (COMPATIBILITY[key1] !== undefined) return COMPATIBILITY[key1];
+  if (COMPATIBILITY[key2] !== undefined) return COMPATIBILITY[key2];
+  return 0; // 정의 안 된 조합 = 보통
+}
+
+function rollPersonality() {
+  return PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)].id;
+}
+
 // ─── 자동 돌봄 ──────────────────────────────────
 const AUTO_CARE_INTERVAL = 5;  // 5틱(25초)마다 자동 돌봄 체크
 const AUTO_FEED_THRESHOLD = 60;
@@ -213,6 +260,7 @@ function createDefaultState() {
     creatureType: null, // 캐릭터 타입 (null = 미선택)
     colorVariant: null, // 색상 변형 (null = 미선택)
     petName: '',        // 펫 이름
+    personality: null,  // 성격 (brave, gentle, playful 등)
     // 전투 스탯
     combatStats: { attack: 0, defense: 0, speed: 0 },
     growthGrade: null,    // 'low' | 'mid' | 'high'
@@ -257,7 +305,8 @@ class TamagotchiGame {
     this.state.creatureType = type;
     this.state.colorVariant = colorVariant || 'orange';
     this.state.petName = petName || '';
-    // 성장 등급 & 초기 스탯 결정
+    // 성격 & 성장 등급 & 초기 스탯 결정
+    this.state.personality = rollPersonality();
     this.state.growthGrade = rollGrowthGrade();
     this.state.growthRolls = rollGrowthValues(this.state.growthGrade);
     this.state.combatStats = rollInitialStats();
