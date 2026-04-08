@@ -412,8 +412,27 @@ function triggerBattle(name1, name2) {
     };
     const d1 = getPetData(name1);
     const d2 = getPetData(name2);
-    win1.webContents.send('world-event', { type: 'battle-resolve', opponent: name2, opponentPower: d2.power, opponentCoins: d2.coins });
-    win2.webContents.send('world-event', { type: 'battle-resolve', opponent: name1, opponentPower: d1.power, opponentCoins: d1.coins });
+
+    // 전투력 비교 → 승자 결정 + 약탈 금액 계산
+    const p1 = d1.power + Math.random() * 20;
+    const p2 = d2.power + Math.random() * 20;
+    let winner, loser, winName, loseName;
+    if (p1 >= p2) {
+      winner = d1; loser = d2; winName = name1; loseName = name2;
+    } else {
+      winner = d2; loser = d1; winName = name2; loseName = name1;
+    }
+    // 패배자 코인의 10~50% 약탈
+    const stolenCoins = Math.floor(loser.coins * (0.1 + Math.random() * 0.4));
+
+    win1.webContents.send('world-event', {
+      type: 'battle-resolve', opponent: name2,
+      won: winName === name1, stolenCoins,
+    });
+    win2.webContents.send('world-event', {
+      type: 'battle-resolve', opponent: name1,
+      won: winName === name2, stolenCoins,
+    });
 
     const key = getRelationshipKey(name1, name2);
     if (worldData.relationships[key]) {
