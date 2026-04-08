@@ -186,6 +186,14 @@ html, body {
   margin-top: 4px;
 }
 
+.status-parents {
+  text-align: center;
+  font-size: 10px;
+  color: #999;
+  margin-top: 2px;
+}
+.status-parents.hidden { display: none; }
+
 .status-combat {
   display: flex;
   justify-content: center;

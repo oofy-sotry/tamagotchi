@@ -250,6 +250,13 @@ function renderState(state, emotion) {
   stageLabel.textContent = game.getStageName();
   ageLabel.textContent = game.getAgeDays() + '살';
 
+  // 부모 정보
+  const parentsInfo = document.getElementById('parents-info');
+  if (parentsInfo && state.parents) {
+    parentsInfo.classList.remove('hidden');
+    parentsInfo.textContent = `👨‍👩‍👧 ${state.parents.parent1} ♥ ${state.parents.parent2}`;
+  }
+
   // 전투력 / 코인 / 등급
   const powerLabel = document.getElementById('power-label');
   const coinLabel = document.getElementById('coin-label');

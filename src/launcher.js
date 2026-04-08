@@ -40,6 +40,7 @@ async function loadPetList() {
 
     const icon = CREATURE_ICONS[pet.creatureType] || '🥚';
     const typeName = CREATURE_NAMES[pet.creatureType] || '알';
+    const parentText = pet.parents ? ` · ${pet.parents.parent1}♥${pet.parents.parent2}` : '';
 
     let badgeHtml = '';
     if (pet.isOpen) badgeHtml = '<span class="pet-card-badge open">실행중</span>';
@@ -49,7 +50,7 @@ async function loadPetList() {
       <div class="pet-card-icon">${icon}</div>
       <div class="pet-card-info">
         <div class="pet-card-name">${pet.name}</div>
-        <div class="pet-card-detail">Lv.${pet.level} ${typeName}</div>
+        <div class="pet-card-detail">Lv.${pet.level} ${typeName}${parentText}</div>
       </div>
       ${badgeHtml}
       <button class="pet-card-delete" title="삭제">🗑</button>

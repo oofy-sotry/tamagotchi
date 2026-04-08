@@ -199,6 +199,7 @@ ipcMain.handle('list-pets', () => {
           level: data.level || 1,
           stage: data.stage || 'egg',
           isDead: data.isDead || false,
+          parents: data.parents || null,
           isOpen: petWindows.has(data.petName || f.replace('.json', '')),
         };
       } catch (e) { return null; }
@@ -494,6 +495,25 @@ function checkEgg(name1, name2) {
   }
 }
 
+// ─── 아기 이름 자동 생성 ─────────────────────────
+const BABY_NAMES = [
+  '꼬미','뭉치','콩이','별이','달이','해피','초코','모찌','두부','구름',
+  '봄이','여름','가을','겨울','하늘','바다','솜이','호두','밤이','도토리',
+  '보리','찹쌀','인절미','떡이','꿀이','사탕','젤리','푸딩','쿠키','마카롱',
+  '루비','진주','토파즈','에메','사파이어','다이아','오팔','자수정','호박','옥이',
+];
+
+function generateBabyName() {
+  const shuffled = BABY_NAMES.sort(() => Math.random() - 0.5);
+  for (const name of shuffled) {
+    if (!fs.existsSync(path.join(PETS_DIR, name + '.json'))) return name;
+  }
+  // 모든 이름이 사용 중이면 번호 붙이기
+  let i = 1;
+  while (fs.existsSync(path.join(PETS_DIR, '아기' + i + '.json'))) i++;
+  return '아기' + i;
+}
+
 function createEggPet(parent1Name, parent2Name) {
   try {
     const p1Data = JSON.parse(fs.readFileSync(path.join(PETS_DIR, parent1Name + '.json'), 'utf-8'));
@@ -511,16 +531,9 @@ function createEggPet(parent1Name, parent2Name) {
       colorVariant = Math.random() < 0.5 ? p1Data.colorVariant : p2Data.colorVariant;
     }
 
-    // 이름 생성
-    const babyName = parent1Name + 'Jr';
-    let finalName = babyName;
-    let suffix = 2;
-    while (fs.existsSync(path.join(PETS_DIR, finalName + '.json'))) {
-      finalName = babyName + suffix;
-      suffix++;
-    }
+    const finalName = generateBabyName();
 
-    // 새 펫 데이터 생성
+    // 새 펫 데이터 생성 (부모 정보 포함)
     const newPet = {
       hunger: 100, happiness: 100, health: 100, cleanliness: 100,
       intimacy: 0, energy: 100,
@@ -529,6 +542,12 @@ function createEggPet(parent1Name, parent2Name) {
       poops: 0, isSick: false, isDead: false, starvingTicks: 0,
       isSleeping: false, level: 1, exp: 0, careScore: 0,
       autoCare: false, birthTime: Date.now(), lastSaveTime: Date.now(),
+      gaugeMax: 100,
+      combatStats: { attack: 0, defense: 0, speed: 0 },
+      growthGrade: null, growthRolls: { attack: 0, defense: 0, speed: 0 },
+      coins: 0, equippedWeapon: null, equippedAccessory: null, inventory: [],
+      // 부모 정보
+      parents: { parent1: parent1Name, parent2: parent2Name },
     };
 
     fs.writeFileSync(path.join(PETS_DIR, finalName + '.json'), JSON.stringify(newPet, null, 2), 'utf-8');
