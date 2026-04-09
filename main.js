@@ -12,7 +12,7 @@ if (!fs.existsSync(PETS_DIR)) fs.mkdirSync(PETS_DIR, { recursive: true });
 
 // ─── 상수 ────────────────────────────────────────
 const PET_WIN_W = 380;
-const PET_WIN_H = 400;
+const PET_WIN_H = 650;
 const LAUNCHER_W = 340;
 const LAUNCHER_H = 420;
 
