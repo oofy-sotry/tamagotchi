@@ -136,23 +136,25 @@ async function updateRelations() {
   try {
     const world = await window.api.getWorld();
     cachedRelations = world.relationships || {};
-    renderRelations(cachedRelations);
+    const { pets } = await window.api.listPets();
+    const deadNames = new Set((pets || []).filter(p => p.isDead).map(p => p.name));
+    renderRelations(cachedRelations, deadNames);
   } catch (e) { /* ignore */ }
 }
 
-function renderRelations(relationships) {
+function renderRelations(relationships, deadNames = new Set()) {
   const container = document.getElementById('relations-list');
   if (!container) return;
 
   const name = myPetName || (game.state && game.state.petName) || '';
   if (!name) { container.classList.add('hidden'); return; }
 
-  // 내가 포함된 관계만 필터
+  // 내가 포함된 관계만 필터 (죽은 펫 제외)
   const myRelations = [];
   for (const [key, rel] of Object.entries(relationships)) {
     const [a, b] = key.split(':');
-    if (a === name) myRelations.push({ partner: b, affinity: rel.affinity });
-    else if (b === name) myRelations.push({ partner: a, affinity: rel.affinity });
+    if (a === name && !deadNames.has(b)) myRelations.push({ partner: b, affinity: rel.affinity });
+    else if (b === name && !deadNames.has(a)) myRelations.push({ partner: a, affinity: rel.affinity });
   }
 
   if (myRelations.length === 0) { container.classList.add('hidden'); return; }
