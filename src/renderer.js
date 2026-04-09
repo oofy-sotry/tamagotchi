@@ -744,11 +744,11 @@ async function onBallMove(e) {
   const newX = winPos.x + (targetX - winPos.x) * lerp;
   const newY = winPos.y + (targetY - winPos.y) * lerp;
 
-  // 방향에 따라 좌우 반전
+  // 방향에 따라 좌우 반전 (캔버스에만 적용해서 상태창은 뒤집히지 않게)
   if (targetX < winPos.x) {
-    petEl.style.transform = 'scaleX(-1)';
+    petCanvas.style.transform = 'scaleX(-1)';
   } else {
-    petEl.style.transform = 'scaleX(1)';
+    petCanvas.style.transform = 'scaleX(1)';
   }
 
   petEl.classList.add('walking');
@@ -863,9 +863,9 @@ async function wander() {
   const distance = Math.sqrt(dx * dx + dy * dy);
 
   if (dx < 0) {
-    petEl.style.transform = 'scaleX(-1)';
+    petCanvas.style.transform = 'scaleX(-1)';
   } else {
-    petEl.style.transform = 'scaleX(1)';
+    petCanvas.style.transform = 'scaleX(1)';
   }
 
   isWalking = true;
