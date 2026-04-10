@@ -81,15 +81,29 @@ function startGame() {
   startWandering();
 }
 
+// ─── 투명도 ──────────────────────────────────────
+function applyOpacity(percent) {
+  const val = Math.max(10, Math.min(100, percent));
+  window.api.setOpacity(val / 100);
+  game.state.opacity = val;
+}
+
 async function boot() {
   const { needsSelection } = await game.init();
   if (needsSelection) {
     showCharacterSelect();
   } else {
     updatePetName(game.state.petName || myPetName);
+    if (game.state.opacity) window.api.setOpacity(game.state.opacity / 100);
     startGame();
   }
 }
+
+// 전체 자동돌봄 수신
+window.api.onSetAutocare((enabled) => {
+  game.state.autoCare = enabled;
+  showNotification(enabled ? '🤖 자동돌봄 ON' : '🤖 자동돌봄 OFF');
+});
 
 // 월드 이벤트 수신 (배틀, 결혼, 알)
 window.api.onWorldEvent((data) => {
@@ -470,6 +484,14 @@ statusPanel.addEventListener('mouseleave', () => {
 // 우클릭 메뉴 (놀아주기 서브메뉴 포함)
 // ═════════════════════════════════════════════════
 let contextMenu = null;
+let contextMenuMouseWatcher = null;
+
+function getDistanceFromPet(x, y) {
+  const rect = petContainer.getBoundingClientRect();
+  const cx = Math.max(rect.left, Math.min(rect.right, x));
+  const cy = Math.max(rect.top, Math.min(rect.bottom, y));
+  return Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
+}
 
 function removeContextMenu() {
   if (contextMenu) {
@@ -482,6 +504,27 @@ function removeContextMenu() {
     window.api.setIgnoreMouse(true);
     mouseOverInteractive = 0;
   }
+  if (contextMenuMouseWatcher) {
+    document.removeEventListener('mousemove', contextMenuMouseWatcher);
+    contextMenuMouseWatcher = null;
+  }
+}
+
+const CONTEXT_MENU_CLOSE_DIST = 180; // px
+
+function attachContextMenuWatcher() {
+  if (contextMenuMouseWatcher) {
+    document.removeEventListener('mousemove', contextMenuMouseWatcher);
+  }
+  contextMenuMouseWatcher = (e) => {
+    if (!contextMenu) { removeContextMenu(); return; }
+    // 메뉴 위에 있으면 유지
+    if (contextMenu.matches(':hover')) return;
+    if (getDistanceFromPet(e.clientX, e.clientY) > CONTEXT_MENU_CLOSE_DIST) {
+      removeContextMenu();
+    }
+  };
+  document.addEventListener('mousemove', contextMenuMouseWatcher);
 }
 
 function createMenuItem(icon, label, action, options = {}) {
@@ -589,12 +632,18 @@ petContainer.addEventListener('contextmenu', (e) => {
     removeContextMenu();
   }));
 
+  // 투명도
+  contextMenu.appendChild(createMenuItem('👁', '투명도', (ev) => {
+    showOpacitySubmenu(ev);
+  }, { hasSubmenu: true }));
+
   // 위치
   contextMenu.style.left = e.clientX + 'px';
   contextMenu.style.top = e.clientY + 'px';
   document.body.appendChild(contextMenu);
   contextMenu.addEventListener('mouseenter', onInteractiveEnter);
   contextMenu.addEventListener('mouseleave', onInteractiveLeave);
+  attachContextMenuWatcher();
 
   requestAnimationFrame(() => {
     if (!contextMenu) return;
@@ -640,6 +689,7 @@ function showPlaySubmenu(e) {
   document.body.appendChild(contextMenu);
   contextMenu.addEventListener('mouseenter', onInteractiveEnter);
   contextMenu.addEventListener('mouseleave', onInteractiveLeave);
+  attachContextMenuWatcher();
 
   // 화면 밖으로 나가면 위치 조정
   requestAnimationFrame(() => {
@@ -651,6 +701,52 @@ function showPlaySubmenu(e) {
     if (rect.bottom > window.innerHeight) {
       contextMenu.style.top = (window.innerHeight - rect.height - 5) + 'px';
     }
+    if (rect.left < 0) contextMenu.style.left = '5px';
+    if (rect.top < 0) contextMenu.style.top = '5px';
+  });
+}
+
+// ─── 투명도 서브메뉴 ─────────────────────────────
+function showOpacitySubmenu(e) {
+  removeContextMenu();
+  document.body.style.pointerEvents = 'auto';
+  window.api.setIgnoreMouse(false);
+
+  contextMenu = document.createElement('div');
+  contextMenu.className = 'context-menu';
+
+  const current = game.state.opacity || 100;
+  [100, 80, 60, 40, 20].forEach(pct => {
+    const isActive = current === pct;
+    contextMenu.appendChild(createMenuItem(
+      isActive ? '✓' : ' ',
+      `${pct}%`,
+      () => {
+        applyOpacity(pct);
+        game.save();
+        removeContextMenu();
+      },
+      { active: isActive }
+    ));
+  });
+
+  contextMenu.appendChild(createSeparator());
+  contextMenu.appendChild(createMenuItem('◂', '뒤로', () => {
+    removeContextMenu();
+  }));
+
+  contextMenu.style.left = e.clientX + 'px';
+  contextMenu.style.top = e.clientY + 'px';
+  document.body.appendChild(contextMenu);
+  contextMenu.addEventListener('mouseenter', onInteractiveEnter);
+  contextMenu.addEventListener('mouseleave', onInteractiveLeave);
+  attachContextMenuWatcher();
+
+  requestAnimationFrame(() => {
+    if (!contextMenu) return;
+    const rect = contextMenu.getBoundingClientRect();
+    if (rect.right > window.innerWidth) contextMenu.style.left = (window.innerWidth - rect.width - 5) + 'px';
+    if (rect.bottom > window.innerHeight) contextMenu.style.top = (window.innerHeight - rect.height - 5) + 'px';
     if (rect.left < 0) contextMenu.style.left = '5px';
     if (rect.top < 0) contextMenu.style.top = '5px';
   });

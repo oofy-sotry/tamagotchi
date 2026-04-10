@@ -10,6 +10,7 @@ const WORLD_PATH = path.join(DATA_DIR, 'world.json');
 // 펫 디렉토리 생성
 if (!fs.existsSync(PETS_DIR)) fs.mkdirSync(PETS_DIR, { recursive: true });
 
+
 // ─── 상수 ────────────────────────────────────────
 const PET_WIN_W = 380;
 const PET_WIN_H = 650;
@@ -22,6 +23,17 @@ const windowPetNames = new Map();   // webContents.id → petName
 let launcherWindow = null;
 let tray = null;
 let petOffsetIndex = 0;
+
+// ─── 펫 숨김 억제 플래그 (창 생성 중 blur 무시) ──
+let lastWindowFocusTime = Date.now();
+let suppressPetHide = false;
+let suppressPetHideTimer = null;
+
+function startSuppressPetHide(ms = 3000) {
+  suppressPetHide = true;
+  if (suppressPetHideTimer) clearTimeout(suppressPetHideTimer);
+  suppressPetHideTimer = setTimeout(() => { suppressPetHide = false; }, ms);
+}
 
 // ═════════════════════════════════════════════════
 // 월드 데이터 (친밀도, 결혼 등)
@@ -46,10 +58,15 @@ let worldData = loadWorld();
 // 런처 윈도우
 // ═════════════════════════════════════════════════
 
+function bringPetsToFront() {
+  setPetsAlwaysOnTop(true);
+}
+
 function createLauncher() {
   if (launcherWindow && !launcherWindow.isDestroyed()) {
     launcherWindow.show();
     launcherWindow.focus();
+    bringPetsToFront();
     return;
   }
 
@@ -73,6 +90,14 @@ function createLauncher() {
 
   launcherWindow.loadFile(path.join(__dirname, 'src', 'launcher.html'));
 
+  launcherWindow.on('focus', () => {
+    bringPetsToFront();
+  });
+
+  launcherWindow.on('show', () => {
+    bringPetsToFront();
+  });
+
   launcherWindow.on('closed', () => {
     launcherWindow = null;
   });
@@ -83,6 +108,10 @@ function createLauncher() {
 // ═════════════════════════════════════════════════
 
 function createPetWindow(petName) {
+  // 창 생성 동안 blur로 인한 숨김을 3초간 억제
+  lastWindowFocusTime = Date.now();
+  startSuppressPetHide(3000);
+
   // 이미 열려있으면 포커스
   if (petWindows.has(petName)) {
     const existing = petWindows.get(petName);
@@ -123,13 +152,19 @@ function createPetWindow(petName) {
   win.setVisibleOnAllWorkspaces(true);
   win.setIgnoreMouseEvents(true, { forward: true });
 
+  // 글로벌 투명도 적용
+  if (worldData.globalOpacity && worldData.globalOpacity < 100) {
+    win.setOpacity(worldData.globalOpacity / 100);
+  }
+
   // 매핑 등록
+  const wcId = win.webContents.id;  // closed 이벤트 전에 캡처
   petWindows.set(petName, win);
-  windowPetNames.set(win.webContents.id, petName);
+  windowPetNames.set(wcId, petName);
 
   win.on('closed', () => {
     petWindows.delete(petName);
-    windowPetNames.delete(win.webContents.id);
+    windowPetNames.delete(wcId);
     updateTrayMenu();
   });
 
@@ -276,6 +311,59 @@ ipcMain.handle('get-pet-name', (event) => {
   return windowPetNames.get(event.sender.id) || null;
 });
 
+// ── 전체 자동돌봄 ──
+ipcMain.handle('set-all-autocare', (_event, enabled) => {
+  try {
+    const files = fs.readdirSync(PETS_DIR).filter(f => f.endsWith('.json'));
+    for (const f of files) {
+      try {
+        const filePath = path.join(PETS_DIR, f);
+        const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        if (!data.isDead) {
+          data.autoCare = enabled;
+          fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+        }
+      } catch (e) { /* ignore */ }
+    }
+    // 열려있는 펫 창에 즉시 반영
+    for (const [, win] of petWindows) {
+      if (!win.isDestroyed()) win.webContents.send('set-autocare', enabled);
+    }
+    return { success: true };
+  } catch (e) {
+    return { success: false };
+  }
+});
+
+// ── 전체 펫 시작 ──
+ipcMain.handle('open-all-pets', async () => {
+  lastWindowFocusTime = Date.now();
+  startSuppressPetHide(5000);
+  try {
+    const files = fs.readdirSync(PETS_DIR).filter(f => f.endsWith('.json'));
+    for (const f of files) {
+      try {
+        const data = JSON.parse(fs.readFileSync(path.join(PETS_DIR, f), 'utf-8'));
+        if (data.isDead) continue;
+        const name = data.petName || f.replace('.json', '');
+        if (!petWindows.has(name)) createPetWindow(name);
+      } catch (e) { /* ignore */ }
+    }
+    setTimeout(() => setPetsAlwaysOnTop(true), 500);
+    return { success: true };
+  } catch (e) {
+    return { success: false };
+  }
+});
+
+// ── 전체 펫 종료 ──
+ipcMain.handle('close-all-pets', () => {
+  for (const [, win] of petWindows) {
+    if (!win.isDestroyed()) win.close();
+  }
+  return { success: true };
+});
+
 // ── 런처 닫기 ──
 ipcMain.handle('close-launcher', () => {
   if (launcherWindow && !launcherWindow.isDestroyed()) {
@@ -330,6 +418,24 @@ ipcMain.handle('get-window-size', (event) => {
     return { width: w, height: h };
   }
   return { width: PET_WIN_W, height: PET_WIN_H };
+});
+
+ipcMain.handle('set-opacity', (event, value) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win) win.setOpacity(Math.max(0.1, Math.min(1.0, value)));
+});
+
+ipcMain.handle('set-all-opacity', (_event, value) => {
+  const opacity = Math.max(0.1, Math.min(1.0, value));
+  for (const [, win] of petWindows) {
+    if (!win.isDestroyed()) win.setOpacity(opacity);
+  }
+  worldData.globalOpacity = Math.round(opacity * 100);
+  saveWorld(worldData);
+});
+
+ipcMain.handle('get-global-opacity', () => {
+  return worldData.globalOpacity || 100;
 });
 
 // ── 월드 데이터 ──
@@ -661,7 +767,7 @@ function createEggPet(parent1Name, parent2Name) {
       stage: 'egg', age: 0, evolutionTicks: 0,
       poops: 0, isSick: false, isDead: false, starvingTicks: 0,
       isSleeping: false, level: 1, exp: 0, careScore: 0,
-      autoCare: false, birthTime: Date.now(), lastSaveTime: Date.now(),
+      autoCare: true, birthTime: Date.now(), lastSaveTime: Date.now(),
       gaugeMax: 100,
       combatStats: { attack: 0, defense: 0, speed: 0 },
       growthGrade: null, growthRolls: { attack: 0, defense: 0, speed: 0 },
@@ -697,4 +803,35 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   createLauncher();
+});
+
+// ─── 다른 앱 사용 시 펫 뒤로 / 돌아오면 앞으로 ───
+function setPetsAlwaysOnTop(flag) {
+  for (const [, win] of petWindows) {
+    if (!win.isDestroyed()) {
+      if (flag) {
+        win.setAlwaysOnTop(true);
+      } else {
+        win.setAlwaysOnTop(true, 'normal', -1);
+      }
+    }
+  }
+}
+
+// 포커스 받으면 → 펫 앞으로 + 마지막 포커스 시간 기록
+app.on('browser-window-focus', () => {
+  lastWindowFocusTime = Date.now();
+  setPetsAlwaysOnTop(true);
+});
+
+// 포커스 잃으면 → 억제 플래그/시간 체크 후 뒤로
+app.on('browser-window-blur', () => {
+  setTimeout(() => {
+    if (suppressPetHide) return;
+    if (Date.now() - lastWindowFocusTime < 1000) return;
+    const anyFocused = BrowserWindow.getAllWindows().some(
+      w => !w.isDestroyed() && w.isFocused()
+    );
+    if (!anyFocused) setPetsAlwaysOnTop(false);
+  }, 500);
 });

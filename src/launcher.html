@@ -158,11 +158,62 @@
     }
     .empty-state .emoji { font-size: 40px; margin-bottom: 10px; }
 
+    /* 투명도 슬라이더 영역 */
+    .opacity-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px 4px;
+      flex-shrink: 0;
+      border-top: 1px solid #eee;
+    }
+    .opacity-bar label {
+      font-size: 12px;
+      color: #888;
+      white-space: nowrap;
+    }
+    .opacity-bar input[type=range] {
+      flex: 1;
+      accent-color: #ff6600;
+      height: 4px;
+      cursor: pointer;
+    }
+    .opacity-bar span {
+      font-size: 12px;
+      color: #555;
+      min-width: 34px;
+      text-align: right;
+    }
+
     /* 새 펫 버튼 영역 */
     .bottom-bar {
-      padding: 8px 16px 12px;
+      padding: 6px 16px 12px;
       flex-shrink: 0;
     }
+    .bulk-btns {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .bulk-btn {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .bulk-btn.start { background: #e8f5e9; color: #2e7d32; }
+    .bulk-btn.start:hover { background: #c8e6c9; }
+    .bulk-btn.stop { background: #fce4ec; color: #c62828; }
+    .bulk-btn.stop:hover { background: #f8bbd0; }
+    .bulk-btn.care-on { background: #e3f2fd; color: #1565c0; }
+    .bulk-btn.care-on:hover { background: #bbdefb; }
+    .bulk-btn.care-off { background: #fff3e0; color: #e65100; }
+    .bulk-btn.care-off:hover { background: #ffe0b2; }
+
     .new-pet-btn {
       width: 100%;
       padding: 10px;
@@ -241,7 +292,21 @@
   <div class="pet-list" id="pet-list"></div>
   <div class="pet-list hidden" id="grave-list"></div>
 
+  <div class="opacity-bar" id="opacity-bar">
+    <label for="global-opacity">👁 투명도</label>
+    <input type="range" id="global-opacity" min="10" max="100" value="100" step="10">
+    <span id="global-opacity-value">100%</span>
+  </div>
+
   <div class="bottom-bar" id="bottom-bar">
+    <div class="bulk-btns">
+      <button class="bulk-btn start" id="start-all-btn">▶ 전체 시작</button>
+      <button class="bulk-btn stop" id="stop-all-btn">■ 전체 종료</button>
+    </div>
+    <div class="bulk-btns">
+      <button class="bulk-btn care-on" id="autocare-on-btn">🤖 자동돌봄 ON</button>
+      <button class="bulk-btn care-off" id="autocare-off-btn">🤖 자동돌봄 OFF</button>
+    </div>
     <button class="new-pet-btn" id="new-pet-btn"><span>+</span> 새 펫 만들기</button>
   </div>
 

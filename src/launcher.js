@@ -203,6 +203,25 @@ async function createNewPet() {
   loadPetList();
 }
 
+// ─── 일괄 시작/종료 ──────────────────────────────
+document.getElementById('autocare-on-btn').addEventListener('click', async () => {
+  await window.api.setAllAutocare(true);
+});
+
+document.getElementById('autocare-off-btn').addEventListener('click', async () => {
+  await window.api.setAllAutocare(false);
+});
+
+document.getElementById('start-all-btn').addEventListener('click', async () => {
+  await window.api.openAllPets();
+  loadPetList();
+});
+
+document.getElementById('stop-all-btn').addEventListener('click', async () => {
+  await window.api.closeAllPets();
+  loadPetList();
+});
+
 // ─── 새 펫 버튼 ──────────────────────────────────
 newPetBtn.addEventListener('click', showNameOverlay);
 
@@ -215,8 +234,29 @@ closeBtn.addEventListener('click', () => {
   window.api.closeLauncher();
 });
 
+// ─── 전체 투명도 슬라이더 ─────────────────────────
+const globalOpacitySlider = document.getElementById('global-opacity');
+const globalOpacityValue = document.getElementById('global-opacity-value');
+
+async function initOpacitySlider() {
+  const saved = await window.api.getGlobalOpacity();
+  globalOpacitySlider.value = saved;
+  globalOpacityValue.textContent = saved + '%';
+}
+
+globalOpacitySlider.addEventListener('input', () => {
+  globalOpacityValue.textContent = globalOpacitySlider.value + '%';
+});
+
+globalOpacitySlider.addEventListener('change', async () => {
+  const val = parseInt(globalOpacitySlider.value, 10);
+  await window.api.setAllOpacity(val / 100);
+  globalOpacityValue.textContent = val + '%';
+});
+
 // ─── 초기화 ──────────────────────────────────────
 loadPetList();
+initOpacitySlider();
 
 // 3초마다 목록 갱신
 setInterval(() => {

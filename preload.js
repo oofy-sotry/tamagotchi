@@ -8,6 +8,10 @@ contextBridge.exposeInMainWorld('api', {
   deletePet: (name) => ipcRenderer.invoke('delete-pet', name),
   getPetName: () => ipcRenderer.invoke('get-pet-name'),
   closeLauncher: () => ipcRenderer.invoke('close-launcher'),
+  openAllPets: () => ipcRenderer.invoke('open-all-pets'),
+  closeAllPets: () => ipcRenderer.invoke('close-all-pets'),
+  setAllAutocare: (enabled) => ipcRenderer.invoke('set-all-autocare', enabled),
+  onSetAutocare: (cb) => ipcRenderer.on('set-autocare', (_e, enabled) => cb(enabled)),
   minimizeLauncher: () => ipcRenderer.invoke('minimize-launcher'),
 
   // 게임 저장/불러오기 (sender 기반 라우팅)
@@ -27,4 +31,9 @@ contextBridge.exposeInMainWorld('api', {
 
   // 월드 이벤트 수신
   onWorldEvent: (callback) => ipcRenderer.on('world-event', (_event, data) => callback(data)),
+
+  // 투명도 제어
+  setOpacity: (value) => ipcRenderer.invoke('set-opacity', value),
+  setAllOpacity: (value) => ipcRenderer.invoke('set-all-opacity', value),
+  getGlobalOpacity: () => ipcRenderer.invoke('get-global-opacity'),
 });
