@@ -38,6 +38,10 @@ async function loadPetList() {
   petList.innerHTML = '';
 
   const alivePets = (pets || []).filter(p => !p.isDead);
+  const deadPetsCount = (pets || []).filter(p => p.isDead).length;
+
+  document.getElementById('count-alive').textContent = alivePets.length || '';
+  document.getElementById('count-grave').textContent = deadPetsCount || '';
 
   if (alivePets.length === 0) {
     petList.innerHTML = `
@@ -120,6 +124,10 @@ async function loadGraveList() {
   graveList.innerHTML = '';
 
   const deadPets = (pets || []).filter(p => p.isDead);
+  const aliveCount = (pets || []).filter(p => !p.isDead).length;
+  document.getElementById('count-alive').textContent = aliveCount || '';
+  document.getElementById('count-grave').textContent = deadPets.length || '';
+
   if (deadPets.length === 0) return;
 
   deadPets.forEach(pet => {

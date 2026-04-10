@@ -82,6 +82,18 @@
     }
     .launcher-tab.active { color: #ff6600; border-bottom-color: #ff6600; }
     .launcher-tab:hover:not(.active) { color: #666; }
+    .tab-count {
+      display: inline-block;
+      background: #eee;
+      color: #888;
+      font-size: 10px;
+      font-weight: bold;
+      border-radius: 8px;
+      padding: 1px 5px;
+      margin-left: 3px;
+      vertical-align: middle;
+    }
+    .launcher-tab.active .tab-count { background: #ffe0cc; color: #cc4400; }
 
     /* 묘지 카드 */
     .grave-card {
@@ -285,8 +297,8 @@
   </div>
 
   <div class="launcher-tabs">
-    <button class="launcher-tab active" id="tab-alive">🐾 살아있는 펫</button>
-    <button class="launcher-tab" id="tab-grave">🪦 묘</button>
+    <button class="launcher-tab active" id="tab-alive">🐾 살아있는 펫 <span class="tab-count" id="count-alive"></span></button>
+    <button class="launcher-tab" id="tab-grave">🪦 묘 <span class="tab-count" id="count-grave"></span></button>
   </div>
 
   <div class="pet-list" id="pet-list"></div>
