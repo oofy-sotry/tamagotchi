@@ -6,8 +6,8 @@
   "author": "oofy-sotry",
   "scripts": {
     "start": "electron .",
-    "build:mac": "electron-builder --mac --universal",
-    "build:win": "electron-builder --win --x64"
+    "build:mac": "electron-builder --mac --universal --publish never",
+    "build:win": "electron-builder --win --x64 --publish never"
   },
   "build": {
     "appId": "com.oofy-sotry.tamagotchi",
