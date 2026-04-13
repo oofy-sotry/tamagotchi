@@ -11,6 +11,8 @@ jobs:
   build-macos:
     name: Build 맥 (Universal)
     runs-on: macos-latest
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: false  # 코드 사이닝 스킵 (ad-hoc 자동 처리)
     steps:
       - name: 코드 체크아웃
         uses: actions/checkout@v4
@@ -21,13 +23,22 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Electron 바이너리 캐시
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/electron
+          key: electron-mac-${{ hashFiles('package-lock.json') }}
+
       - name: 패키지 설치
         run: npm ci
 
-      - name: 맥 앱 빌드 (arm64 + x64 Universal)
+      - name: 맥 앱 빌드 (Universal)
         run: npm run build:mac
 
-      - name: 아티팩트 업로드 (dmg + zip)
+      - name: 빌드 결과 확인
+        run: ls -lh dist/
+
+      - name: 아티팩트 업로드
         uses: actions/upload-artifact@v4
         with:
           name: mac-build
@@ -49,13 +60,22 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Electron 바이너리 캐시
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\electron\Cache
+          key: electron-win-${{ hashFiles('package-lock.json') }}
+
       - name: 패키지 설치
         run: npm ci
 
       - name: 윈도우 앱 빌드
         run: npm run build:win
 
-      - name: 아티팩트 업로드 (exe)
+      - name: 빌드 결과 확인
+        run: dir dist\
+
+      - name: 아티팩트 업로드
         uses: actions/upload-artifact@v4
         with:
           name: win-build
@@ -81,6 +101,11 @@ jobs:
           name: win-build
           path: ./win
 
+      - name: 빌드 파일 목록 확인
+        run: |
+          echo "=== macOS ===" && ls -lh mac/
+          echo "=== Windows ===" && ls -lh win/
+
       - name: GitHub Release 생성 및 파일 첨부
         uses: softprops/action-gh-release@v2
         with:
@@ -92,13 +117,13 @@ jobs:
 
             | 파일 | 대상 | 설명 |
             |------|------|------|
-            | `다마고치-universal.dmg` | 맥 사용자 | Apple Silicon + Intel 통합 |
-            | `다마고치-universal-mac.zip` | 맥 사용자 | .app 직접 압축 |
-            | `다마고치 Setup.exe` | 윈도우 사용자 | 설치 프로그램 |
+            | `.dmg` | 맥 사용자 | Apple Silicon + Intel 통합 |
+            | `.zip` | 맥 사용자 | .app 직접 압축 |
+            | `.exe` | 윈도우 사용자 | 설치 프로그램 |
 
             ### 맥 설치
             1. `.dmg` 다운로드 후 열기
-            2. `다마고치.app`을 Applications 폴더로 드래그
+            2. 앱을 Applications 폴더로 드래그
             3. 처음 실행 시 **우클릭 → 열기** (보안 경고 우회)
 
             ### 윈도우 설치
