@@ -133,7 +133,7 @@ function createPetWindow(petName) {
     y: Math.floor(screenH - PET_WIN_H),
     transparent: true,
     frame: false,
-    alwaysOnTop: true,
+    alwaysOnTop: false,
     resizable: false,
     skipTaskbar: true,
     hasShadow: false,
@@ -810,9 +810,9 @@ function setPetsAlwaysOnTop(flag) {
   for (const [, win] of petWindows) {
     if (!win.isDestroyed()) {
       if (flag) {
-        win.setAlwaysOnTop(true);
+        win.setAlwaysOnTop(true, 'floating');
       } else {
-        win.setAlwaysOnTop(true, 'normal', -1);
+        win.setAlwaysOnTop(false);
       }
     }
   }
