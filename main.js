@@ -149,7 +149,7 @@ function createPetWindow(petName, { silent = false } = {}) {
     query: { pet: petName },
   });
 
-  win.setVisibleOnAllWorkspaces(true);
+  if (process.platform === 'darwin') win.setVisibleOnAllWorkspaces(true);
   win.setIgnoreMouseEvents(true, { forward: true });
 
   // 글로벌 투명도 적용
@@ -848,8 +848,10 @@ function setPetsAlwaysOnTop(flag) {
     if (!win.isDestroyed()) {
       if (flag) {
         win.setAlwaysOnTop(true, 'floating');   // 다른 앱 위에 표시
+      } else if (process.platform === 'darwin') {
+        win.setAlwaysOnTop(true, 'normal', -1); // macOS: NSNormalWindowLevel-1 → 다른 앱 뒤로
       } else {
-        win.setAlwaysOnTop(true, 'normal', -1); // 다른 앱 창 뒤로 (NSNormalWindowLevel-1)
+        win.setAlwaysOnTop(false);              // Windows: 일반 창으로 전환 → 다른 앱 뒤로
       }
     }
   }
