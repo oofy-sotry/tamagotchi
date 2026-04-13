@@ -190,24 +190,49 @@ const PERSONALITIES = [
 
 // 궁합표: 1 = 좋음, 0 = 보통, -1 = 나쁨
 const COMPATIBILITY = {
-  'brave:gentle':   1,   // 용감+온화 = 서로 보완
+  // 용감
+  'brave:brave':    1,   // 용감+용감 = 서로 존중
+  'brave:gentle':   1,   // 용감+온화 = 보완
+  'brave:playful':  1,   // 용감+장난 = 활기차게 어울림
+  'brave:lazy':    -1,   // 용감+게으른 = 답답함
   'brave:proud':   -1,   // 용감+도도 = 충돌
   'brave:shy':      1,   // 용감+수줍 = 보호해줌
-  'brave:lazy':    -1,   // 용감+게으른 = 답답함
-  'gentle:caring':  1,   // 온화+다정 = 천생연분
-  'gentle:greedy': -1,   // 온화+욕심 = 가치관 충돌
+  'brave:greedy':   0,   // 용감+욕심 = 보통
+  'brave:caring':   1,   // 용감+다정 = 든든함
+  // 온화
+  'gentle:gentle':  1,   // 온화+온화 = 평화로움
   'gentle:playful': 1,   // 온화+장난 = 재밌게 어울림
+  'gentle:lazy':   -1,   // 온화+게으른 = 노력 차이에 실망
+  'gentle:proud':  -1,   // 온화+도도 = 무시당함
+  'gentle:shy':     1,   // 온화+수줍 = 편안하게 해줌
+  'gentle:greedy': -1,   // 온화+욕심 = 가치관 충돌
+  'gentle:caring':  1,   // 온화+다정 = 천생연분
+  // 장난꾸러기
+  'playful:playful':1,   // 장난+장난 = 같이 놀기
   'playful:lazy':  -1,   // 장난+게으른 = 놀아주지 않음
-  'playful:playful': 1,  // 장난+장난 = 같이 놀기
   'playful:proud': -1,   // 장난+도도 = 짜증
+  'playful:shy':   -1,   // 장난+수줍 = 압도당함
+  'playful:greedy':-1,   // 장난+욕심 = 관심 다툼
+  'playful:caring': 1,   // 장난+다정 = 잘 받아줌
+  // 게으른
   'lazy:lazy':      1,   // 게으른+게으른 = 편안함
+  'lazy:proud':    -1,   // 게으른+도도 = 경멸당함
+  'lazy:shy':       0,   // 게으른+수줍 = 조용히 공존
+  'lazy:greedy':   -1,   // 게으른+욕심 = 욕심이 답답해함
   'lazy:caring':   -1,   // 게으른+다정 = 돌봐주는데 반응없음
+  // 도도
   'proud:proud':   -1,   // 도도+도도 = 서로 양보 안함
   'proud:shy':      0,   // 도도+수줍 = 무관심
-  'shy:caring':     1,   // 수줍+다정 = 안심
+  'proud:greedy':  -1,   // 도도+욕심 = 둘 다 이기적
+  'proud:caring':  -1,   // 도도+다정 = 호의를 무시
+  // 수줍
+  'shy:shy':        1,   // 수줍+수줍 = 서로 이해함
   'shy:greedy':    -1,   // 수줍+욕심 = 위축됨
+  'shy:caring':     1,   // 수줍+다정 = 안심
+  // 욕심
   'greedy:greedy': -1,   // 욕심+욕심 = 다툼
-  'greedy:brave':   0,   // 욕심+용감 = 보통
+  'greedy:caring': -1,   // 욕심+다정 = 호의 이용당함
+  // 다정
   'caring:caring':  1,   // 다정+다정 = 최고
 };
 

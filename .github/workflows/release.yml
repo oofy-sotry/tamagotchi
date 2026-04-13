@@ -1,0 +1,112 @@
+name: Build & Release
+
+# v* 태그가 푸시될 때 실행 (예: v1.0.0)
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  # ── 맥 빌드 ────────────────────────────────────────────────
+  build-macos:
+    name: Build 맥 (Universal)
+    runs-on: macos-latest
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 패키지 설치
+        run: npm ci
+
+      - name: 맥 앱 빌드 (arm64 + x64 Universal)
+        run: npm run build:mac
+
+      - name: 아티팩트 업로드 (dmg + zip)
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-build
+          path: |
+            dist/*.dmg
+            dist/*.zip
+
+  # ── 윈도우 빌드 ─────────────────────────────────────────────
+  build-windows:
+    name: Build 윈도우
+    runs-on: windows-latest
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 패키지 설치
+        run: npm ci
+
+      - name: 윈도우 앱 빌드
+        run: npm run build:win
+
+      - name: 아티팩트 업로드 (exe)
+        uses: actions/upload-artifact@v4
+        with:
+          name: win-build
+          path: dist/*.exe
+
+  # ── GitHub Release 생성 ─────────────────────────────────────
+  release:
+    name: Create Release
+    needs: [build-macos, build-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 맥 빌드 다운로드
+        uses: actions/download-artifact@v4
+        with:
+          name: mac-build
+          path: ./mac
+
+      - name: 윈도우 빌드 다운로드
+        uses: actions/download-artifact@v4
+        with:
+          name: win-build
+          path: ./win
+
+      - name: GitHub Release 생성 및 파일 첨부
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "다마고치 ${{ github.ref_name }}"
+          body: |
+            ## 다마고치 ${{ github.ref_name }}
+
+            ### 다운로드
+
+            | 파일 | 대상 | 설명 |
+            |------|------|------|
+            | `다마고치-universal.dmg` | 맥 사용자 | Apple Silicon + Intel 통합 |
+            | `다마고치-universal-mac.zip` | 맥 사용자 | .app 직접 압축 |
+            | `다마고치 Setup.exe` | 윈도우 사용자 | 설치 프로그램 |
+
+            ### 맥 설치
+            1. `.dmg` 다운로드 후 열기
+            2. `다마고치.app`을 Applications 폴더로 드래그
+            3. 처음 실행 시 **우클릭 → 열기** (보안 경고 우회)
+
+            ### 윈도우 설치
+            1. `.exe` 다운로드 후 실행
+            2. 설치 완료 후 바탕화면 아이콘으로 실행
+          files: |
+            mac/*.dmg
+            mac/*.zip
+            win/*.exe
+          draft: false
+          prerelease: false

@@ -25,7 +25,6 @@ let tray = null;
 let petOffsetIndex = 0;
 
 // ─── 펫 숨김 억제 플래그 (창 생성 중 blur 무시) ──
-let lastWindowFocusTime = Date.now();
 let suppressPetHide = false;
 let suppressPetHideTimer = null;
 
@@ -107,19 +106,20 @@ function createLauncher() {
 // 펫 윈도우
 // ═════════════════════════════════════════════════
 
-function createPetWindow(petName) {
-  // 창 생성 동안 blur로 인한 숨김을 3초간 억제
-  lastWindowFocusTime = Date.now();
-  startSuppressPetHide(3000);
-
-  // 이미 열려있으면 포커스
+function createPetWindow(petName, { silent = false } = {}) {
+  // 이미 열려있으면 포커스 (silent 모드에서는 포커스 없이 show만)
   if (petWindows.has(petName)) {
     const existing = petWindows.get(petName);
     if (!existing.isDestroyed()) {
       existing.show();
-      existing.focus();
+      if (!silent) existing.focus();
       return;
     }
+  }
+
+  // 새 창 생성 시에만 blur 억제 (silent 모드 제외)
+  if (!silent) {
+    startSuppressPetHide(1500);
   }
 
   const { width: screenW, height: screenH } = screen.getPrimaryDisplay().workAreaSize;
@@ -133,7 +133,7 @@ function createPetWindow(petName) {
     y: Math.floor(screenH - PET_WIN_H),
     transparent: true,
     frame: false,
-    alwaysOnTop: false,
+    alwaysOnTop: true,
     resizable: false,
     skipTaskbar: true,
     hasShadow: false,
@@ -337,8 +337,7 @@ ipcMain.handle('set-all-autocare', (_event, enabled) => {
 
 // ── 전체 펫 시작 ──
 ipcMain.handle('open-all-pets', async () => {
-  lastWindowFocusTime = Date.now();
-  startSuppressPetHide(5000);
+  startSuppressPetHide(2000);
   try {
     const files = fs.readdirSync(PETS_DIR).filter(f => f.endsWith('.json'));
     for (const f of files) {
@@ -480,14 +479,50 @@ function getRelationshipKey(name1, name2) {
 
 // ─── 성격 궁합 (game.js와 동일) ──────────────────
 const COMPAT_MAP = {
-  'brave:gentle':1,'brave:proud':-1,'brave:shy':1,'brave:lazy':-1,
-  'gentle:caring':1,'gentle:greedy':-1,'gentle:playful':1,
-  'playful:lazy':-1,'playful:playful':1,'playful:proud':-1,
-  'lazy:lazy':1,'lazy:caring':-1,
-  'proud:proud':-1,'proud:shy':0,
-  'shy:caring':1,'shy:greedy':-1,
-  'greedy:greedy':-1,'greedy:brave':0,
-  'caring:caring':1,
+  // 용감
+  'brave:brave':    1,   // 용감+용감 = 서로 존중
+  'brave:gentle':   1,   // 용감+온화 = 보완
+  'brave:playful':  1,   // 용감+장난 = 활기차게 어울림
+  'brave:lazy':    -1,   // 용감+게으른 = 답답함
+  'brave:proud':   -1,   // 용감+도도 = 충돌
+  'brave:shy':      1,   // 용감+수줍 = 보호해줌
+  'brave:greedy':   0,   // 용감+욕심 = 보통
+  'brave:caring':   1,   // 용감+다정 = 든든함
+  // 온화
+  'gentle:gentle':  1,   // 온화+온화 = 평화로움
+  'gentle:playful': 1,   // 온화+장난 = 재밌게 어울림
+  'gentle:lazy':   -1,   // 온화+게으른 = 노력 차이에 실망
+  'gentle:proud':  -1,   // 온화+도도 = 무시당함
+  'gentle:shy':     1,   // 온화+수줍 = 편안하게 해줌
+  'gentle:greedy': -1,   // 온화+욕심 = 가치관 충돌
+  'gentle:caring':  1,   // 온화+다정 = 천생연분
+  // 장난꾸러기
+  'playful:playful':1,   // 장난+장난 = 같이 놀기
+  'playful:lazy':  -1,   // 장난+게으른 = 놀아주지 않음
+  'playful:proud': -1,   // 장난+도도 = 짜증
+  'playful:shy':   -1,   // 장난+수줍 = 압도당함
+  'playful:greedy':-1,   // 장난+욕심 = 관심 다툼
+  'playful:caring': 1,   // 장난+다정 = 잘 받아줌
+  // 게으른
+  'lazy:lazy':      1,   // 게으른+게으른 = 편안함
+  'lazy:proud':    -1,   // 게으른+도도 = 경멸당함
+  'lazy:shy':       0,   // 게으른+수줍 = 조용히 공존
+  'lazy:greedy':   -1,   // 게으른+욕심 = 욕심이 답답해함
+  'lazy:caring':   -1,   // 게으른+다정 = 돌봐주는데 반응없음
+  // 도도
+  'proud:proud':   -1,   // 도도+도도 = 서로 양보 안함
+  'proud:shy':      0,   // 도도+수줍 = 무관심
+  'proud:greedy':  -1,   // 도도+욕심 = 둘 다 이기적
+  'proud:caring':  -1,   // 도도+다정 = 호의를 무시
+  // 수줍
+  'shy:shy':        1,   // 수줍+수줍 = 서로 이해함
+  'shy:greedy':    -1,   // 수줍+욕심 = 위축됨
+  'shy:caring':     1,   // 수줍+다정 = 안심
+  // 욕심
+  'greedy:greedy': -1,   // 욕심+욕심 = 다툼
+  'greedy:caring': -1,   // 욕심+다정 = 호의 이용당함
+  // 다정
+  'caring:caring':  1,   // 다정+다정 = 최고
 };
 
 function getCompatibility(p1, p2) {
@@ -534,8 +569,10 @@ function handleNearby(name1, name2) {
     rel.affinity = Math.min(100, rel.affinity + 3);  // 최고 궁합
   } else if (totalCompat >= 0.5) {
     rel.affinity = Math.min(100, rel.affinity + 2);  // 좋은 궁합
+  } else if (totalCompat >= 0.0) {
+    rel.affinity = Math.min(100, rel.affinity + 1);  // 살짝 좋은 궁합
   } else if (totalCompat >= -0.5) {
-    rel.affinity = Math.min(100, rel.affinity + 1);  // 보통
+    // 중립 — 변화 없음 (좋지도 나쁘지도 않음)
   } else {
     rel.affinity = Math.max(-100, rel.affinity - 1);  // 나쁜 궁합
   }
@@ -780,8 +817,8 @@ function createEggPet(parent1Name, parent2Name) {
 
     fs.writeFileSync(path.join(PETS_DIR, finalName + '.json'), JSON.stringify(newPet, null, 2), 'utf-8');
 
-    // 자동으로 윈도우 열기
-    createPetWindow(finalName);
+    // 자동으로 윈도우 열기 (포커스/blur억제 없이 조용히)
+    createPetWindow(finalName, { silent: true });
   } catch (e) {
     console.error('Failed to create egg pet:', e);
   }
@@ -810,28 +847,26 @@ function setPetsAlwaysOnTop(flag) {
   for (const [, win] of petWindows) {
     if (!win.isDestroyed()) {
       if (flag) {
-        win.setAlwaysOnTop(true, 'floating');
+        win.setAlwaysOnTop(true, 'floating');   // 다른 앱 위에 표시
       } else {
-        win.setAlwaysOnTop(false);
+        win.setAlwaysOnTop(true, 'normal', -1); // 다른 앱 창 뒤로 (NSNormalWindowLevel-1)
       }
     }
   }
 }
 
-// 포커스 받으면 → 펫 앞으로 + 마지막 포커스 시간 기록
+// 포커스 받으면 → 펫 앞으로
 app.on('browser-window-focus', () => {
-  lastWindowFocusTime = Date.now();
   setPetsAlwaysOnTop(true);
 });
 
-// 포커스 잃으면 → 억제 플래그/시간 체크 후 뒤로
+// 포커스 잃으면 → 창 생성 중 억제 플래그 체크 후 뒤로
 app.on('browser-window-blur', () => {
   setTimeout(() => {
     if (suppressPetHide) return;
-    if (Date.now() - lastWindowFocusTime < 1000) return;
     const anyFocused = BrowserWindow.getAllWindows().some(
       w => !w.isDestroyed() && w.isFocused()
     );
     if (!anyFocused) setPetsAlwaysOnTop(false);
-  }, 500);
+  }, 300);
 });

@@ -1,17 +1,52 @@
 {
   "name": "tamagotchi",
   "version": "1.0.0",
-  "description": "",
+  "description": "데스크톱 다마고치 — 멀티 펫, 전투, 결혼 시스템",
   "main": "main.js",
+  "author": "oofy-sotry",
   "scripts": {
     "start": "electron .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build:mac": "electron-builder --mac --universal",
+    "build:win": "electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "com.oofy-sotry.tamagotchi",
+    "productName": "다마고치",
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.games",
+      "target": [
+        { "target": "dmg",  "arch": ["universal"] },
+        { "target": "zip",  "arch": ["universal"] }
+      ]
+    },
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "dmg": {
+      "title": "다마고치 설치",
+      "window": { "width": 540, "height": 380 }
+    }
   },
   "keywords": [],
-  "author": "",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
-    "electron": "^41.1.1"
+    "electron": "^41.1.1",
+    "electron-builder": "^26.8.1"
   }
 }
